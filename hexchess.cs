@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -174,8 +174,6 @@ namespace HexC
         public EventTypeEnum Type { get { return t; } }
     }
 
-
-
     class Board
     {
         // MEMBERS
@@ -189,18 +187,16 @@ namespace HexC
         public Board() { }
         public Board(Board cloneMe)
         {
-            foreach (PlacedPiece p in cloneMe.placedPieces)
-            {
-                placedPieces.Add(p);
-            }
-            foreach (Piece p in cloneMe.sidelined)
-            {
-                sidelined.Add(p);
-            }
+            foreach (PlacedPiece p in cloneMe.placedPieces) { placedPieces.Add(p); }
+            foreach (Piece p in cloneMe.sidelined) { sidelined.Add(p); }
         }
 
         // METHODS
-        public void Add(PlacedPiece p) { placedPieces.Add(p); }
+        public void Add(PlacedPiece p)
+        {
+            placedPieces.Add(p);
+            SpewBoard();
+        }
 
         public void Remove(PlacedPiece p)
         {
@@ -209,10 +205,22 @@ namespace HexC
                 if (placed.DeepEquals(p))
                 {
                     placedPieces.Remove(placed);
+                    SpewBoard();
                     return;
                 }
             }
             Debug.Assert(false); // hey why remove what isn't there?
+        }
+
+        private void SpewBoard()
+        {
+            // Write the board situation to the \board.txt file so i can view it.
+            List<string> pieces = new List<string>();
+            foreach( PlacedPiece pp in placedPieces )
+            {
+                pieces.Add(pp.Location.Q.ToString() + "," + pp.Location.R.ToString() + " " + pp.Color.ToString() + " " + pp.PieceType.ToString());
+            }
+            System.IO.File.WriteAllLines(@"C:\temp\board.txt", pieces.ToArray());
         }
 
         public List<PlacedPiece> PlacedPiecesThisColor(ColorsEnum col)
@@ -292,11 +300,29 @@ namespace HexC
                 bHypothetical.Remove(p);                     // take me off.
                 bHypothetical.Add(new PlacedPiece(p, bl));   // put me on at the destination
 
-                if (false == bHypothetical.InCheck(p.Color)) // see if i'm in check
+                if (false == bHypothetical.CanBeAttacked(p))
                     realOptions.Add(bl);
+
+//                if (false == bHypothetical.InCheck(p.Color)) // see if i'm in check
+//                    realOptions.Add(bl);
             }
             return realOptions;
         }
+
+        // maybe this only applies to kings
+        bool CanBeAttacked(PlacedPiece p)
+        {
+            foreach (PlacedPiece pp in placedPieces)
+            {
+                if (pp.DeepEquals(p)) continue; // i can't attack me
+                if (pp.Color == p.Color) continue; // my color can't attack me
+
+                BoardLocationList bll = WhereCanIReach(pp, true);
+                if (bll.ContainsTheLocation(p.Location))
+                    return true;
+            }
+            return false;
+}
 
         bool CanAttack(PlacedPiece p, PlacedPiece pVictim)
         {
@@ -304,7 +330,8 @@ namespace HexC
                 return false;// can't attack my kind.
 
             BoardLocationList options = WhereCanIReach(p);
-            if (options.Contains(pVictim.Location))
+            //            if (options.Contains(pVictim.Location))
+            if(options.ContainsTheLocation(pVictim.Location))
                 return true;
 
             return false;
@@ -322,7 +349,8 @@ namespace HexC
             return false;
         }
 
-        BoardLocationList WhereCanIReach ( PlacedPiece p )
+        // fShallow means I don't check if the move puts me in check.
+        BoardLocationList WhereCanIReach ( PlacedPiece p, bool fShallow = false )
         {
             switch(p.PieceType)
             {
@@ -331,7 +359,9 @@ namespace HexC
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
                         options = YankSpotsOfThisColor(options, p.Color);
-                        options = YankSpotsThatPutMeInCheck(options, p);
+                        if(false == fShallow)
+                            options = YankSpotsThatPutMeInCheck(options, p);
+
                         return options;
                     }
 
@@ -343,7 +373,9 @@ namespace HexC
                         BoardLocationList spots = KingStatic.CouldGoIfOmnipotent(p.Location);
                         spots = YankSpotsThatArentBoardSpots(spots);
                         spots = YankSpotsOfThisColor(spots, p.Color); // diddily doo is not handled here!
-                        spots = YankSpotsThatPutMeInCheck(spots, p);
+                        if(false == fShallow)
+                            spots = YankSpotsThatPutMeInCheck(spots, p);
+
                         return spots;
                     }
 
@@ -379,6 +411,9 @@ namespace HexC
                         }
 
                         options = YankSpotsThatArentBoardSpots(options);
+
+//                        if (false == fShallow)
+//                            options = 
 
                         return options;
                     }
@@ -639,10 +674,12 @@ namespace HexC
             // bredth first then it is.
 
             // throw kings on there
-            PlacedPiece whiteKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.White, -3, -1);
-            b.Add(whiteKing);
-            PlacedPiece brownKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Brown, -4, -1);
+            PlacedPiece blackKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, 1, 1);
+            b.Add(blackKing);
+            PlacedPiece brownKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Brown, -2, -1);
             b.Add(brownKing);
+
+            List<List<PieceEvent>> duhmyoptions = b.WhatCanIDo(brownKing);
 
             Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Brown);
             foreach (ColorsEnum color in g.NextThree)
@@ -703,5 +740,3 @@ namespace HexC
         }
     }
 }
-
-// pants
