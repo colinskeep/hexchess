@@ -7,8 +7,12 @@ using System.Diagnostics;
 
 namespace HexC
 {
-    enum PiecesEnum { Pawn, Knight, Castle, Queen, King }
-    enum ColorsEnum { White, Brown, Black }
+    public enum PiecesEnum { Pawn, Knight, Castle, Queen, King }
+    public enum ColorsEnum { White, Tan, Black }
+
+    // these numbers are the axial coordinate system on a flat-topped hex board.
+    // let's change them to pointy-topped!
+    // http://www.redblobgames.com/grids/hexagons/
 
     class KingStatic : PieceStatic
     {
@@ -27,8 +31,8 @@ namespace HexC
         public static BoardLocationList CouldGoIfOmnipotent(BoardLocation fromHere)
         {
             int[,] JumpOptions = {
-                { 1, -3 }, { 2, -3 }, { -2, -1 }, { -1, -2 }, { 3, -2 }, { 3, -1 },
-                { 2, 1 }, { 1, 2 }, { -2, 3 }, {-1, 3 }, {-3, 1 }, {-3, 2 }
+                                    { 1, -3 }, { 2, -3 }, { -2, -1 }, { -1, -2 }, { 3, -2 }, { 3, -1 },
+                                    { 2, 1 }, { 1, 2 }, { -2, 3 }, {-1, 3 }, {-3, 1 }, {-3, 2 }
             };
             return CookUpLocations(fromHere, JumpOptions);
         }
@@ -41,16 +45,19 @@ namespace HexC
             List<BoardLocationList> ll = new List<BoardLocationList>();
 
             // SEQUENCE of these matters, radiating out from the piece.
-            int[,] StarOne = { { 1,-1 }, { 2,-2 }, { 3, -3 }, { 4, -4 }, { 5, -5 } };
-            int[,] StarTwo = { { 0, 1 }, { 0, 2 }, { 0,  3 }, { 0,  4 }, { 0,  5 } };
-            int[,] StarThr = { { -1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 0 }, { 1, -1 } };
+            int[,] StarOne =  { { 1, -1 }, { 2, -2 }, { 3, -3 }, { 4, -4 }, { 5, -5 } };
+            int[,] StarTwo = { { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 }, { 5, 0 } };
+            int[,] StarThr =  { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 0, 4 }, { 0, 5 } };
             int[,] StarFou = { { -1, 1 }, { -2, 2 }, { -3, 3 }, { -4, 4 }, { -5, 5 } };
-            int[,] StarFiv = { { 0, 1 }, { 0, 2 }, { 0, 3 },  { 0, 4 },  { 0, 5 } };
+            int[,] StarFiv = { { -1, 0 }, { -2, 0 }, { -3, 0 }, { -4, 0 }, { -5, 0 } };
+            int[,] StarSix =  { { 0, -1 }, { 0, -2 }, { 0, -3 }, { 0, -4 }, { 0, -5 } };
+
             ll.Add(CookUpLocations(loc, StarOne));
             ll.Add(CookUpLocations(loc, StarTwo));
             ll.Add(CookUpLocations(loc, StarThr));
             ll.Add(CookUpLocations(loc, StarFou));
             ll.Add(CookUpLocations(loc, StarFiv));
+            ll.Add(CookUpLocations(loc, StarSix));
 
             return ll;
         }
@@ -71,7 +78,7 @@ namespace HexC
         }
     }
 
-    class BoardLocation
+    public class BoardLocation
     {
         public BoardLocation(int q, int r)
         {
@@ -101,11 +108,9 @@ namespace HexC
 
     class BoardLocationList : List<BoardLocation>
     {
-        // i only keep you from shooting yourself. nothing more.
-
         public bool ContainsTheLocation(BoardLocation bToMatch)
         {
-            foreach( BoardLocation bl in this )
+            foreach (BoardLocation bl in this)
             {
                 if (bl.Q == bToMatch.Q)
                     if (bl.R == bToMatch.R)
@@ -115,7 +120,7 @@ namespace HexC
         }
     }
 
-    class Piece
+    public class Piece
     {
         public Piece(PiecesEnum pt, ColorsEnum c)
         {
@@ -130,7 +135,7 @@ namespace HexC
         public ColorsEnum Color { get { return this.pieceColor; } }
     }
 
-    class PlacedPiece : Piece
+    public class PlacedPiece : Piece
     {
         public PlacedPiece(PiecesEnum pt, ColorsEnum c, int q, int r) : base(pt, c)
         {
@@ -146,7 +151,7 @@ namespace HexC
 
         public BoardLocation Location { get { return new BoardLocation(q, r); } }
 
-        public bool DeepEquals( PlacedPiece p )
+        public bool DeepEquals(PlacedPiece p)
         {
             if (this.pieceColor != p.pieceColor) return false;
             if (this.pieceType != p.pieceType) return false;
@@ -173,6 +178,7 @@ namespace HexC
         public PlacedPiece Regarding { get { return p; } }
         public EventTypeEnum Type { get { return t; } }
     }
+    
 
     class Board
     {
@@ -187,15 +193,31 @@ namespace HexC
         public Board() { }
         public Board(Board cloneMe)
         {
-            foreach (PlacedPiece p in cloneMe.placedPieces) { placedPieces.Add(p); }
-            foreach (Piece p in cloneMe.sidelined) { sidelined.Add(p); }
+            foreach (PlacedPiece p in cloneMe.placedPieces)
+            {
+                placedPieces.Add(p);
+            }
+            foreach (Piece p in cloneMe.sidelined)
+            {
+                sidelined.Add(p);
+            }
         }
 
         // METHODS
         public void Add(PlacedPiece p)
         {
+            // i'm gonna prevent you from adding an impossible number of pieces,
+            // just cuz i roll that way.
+            switch (p.PieceType)
+            {
+                case PiecesEnum.King:
+                    // if this is the king we're adding, well, let's make sure there isn't one already.
+                    Debug.Assert(null == this.FindPiece(PiecesEnum.King, p.Color));
+                    break;
+
+                    // others need checks
+            }
             placedPieces.Add(p);
-            SpewBoard();
         }
 
         public void Remove(PlacedPiece p)
@@ -205,29 +227,17 @@ namespace HexC
                 if (placed.DeepEquals(p))
                 {
                     placedPieces.Remove(placed);
-                    SpewBoard();
                     return;
                 }
             }
             Debug.Assert(false); // hey why remove what isn't there?
         }
 
-        private void SpewBoard()
-        {
-            // Write the board situation to the \board.txt file so i can view it.
-            List<string> pieces = new List<string>();
-            foreach( PlacedPiece pp in placedPieces )
-            {
-                pieces.Add(pp.Location.Q.ToString() + "," + pp.Location.R.ToString() + " " + pp.Color.ToString() + " " + pp.PieceType.ToString());
-            }
-            System.IO.File.WriteAllLines(@"C:\temp\board.txt", pieces.ToArray());
-        }
-
         public List<PlacedPiece> PlacedPiecesThisColor(ColorsEnum col)
         {
             List<PlacedPiece> myCol = new List<PlacedPiece>();
 
-            foreach( PlacedPiece p in placedPieces )
+            foreach (PlacedPiece p in placedPieces)
             {
                 if (p.Color == col)
                     myCol.Add(p);
@@ -238,20 +248,20 @@ namespace HexC
 
         PlacedPiece AnyoneThere(BoardLocation b)
         {
-            foreach( PlacedPiece pp in placedPieces )
+            foreach (PlacedPiece pp in placedPieces)
             {
                 if (pp.Location.Q == b.Q)
                     if (pp.Location.R == b.R)
-                        return pp ;
+                        return pp;
             }
             return null;
         }
 
-        BoardLocationList YankSpotsThatArentBoardSpots( BoardLocationList options )
+        BoardLocationList YankSpotsThatArentBoardSpots(BoardLocationList options)
         {
             BoardLocationList realOptions = new BoardLocationList();
 
-            foreach( BoardLocation b in options )
+            foreach (BoardLocation b in options)
             {
                 if (b.IsValidLocation())
                     realOptions.Add(b);
@@ -264,7 +274,7 @@ namespace HexC
         {
             BoardLocationList realOptions = new BoardLocationList();
 
-            foreach ( BoardLocation b in options)
+            foreach (BoardLocation b in options)
             {
                 PlacedPiece p = AnyoneThere(b);
                 if (null != p)
@@ -280,7 +290,7 @@ namespace HexC
         {
             Debug.Assert(type == PiecesEnum.King || type == PiecesEnum.Queen);
 
-            foreach( PlacedPiece p in this.placedPieces)
+            foreach (PlacedPiece p in this.placedPieces)
             {
                 if (p.PieceType == type)
                     if (p.Color == c)
@@ -291,6 +301,8 @@ namespace HexC
 
         BoardLocationList YankSpotsThatPutMeInCheck(BoardLocationList options, PlacedPiece p)
         {
+            Console.WriteLine("A {1} {0} removes spots that put their team in check.", p.PieceType.ToString(), p.Color.ToString());
+
             BoardLocationList realOptions = new BoardLocationList();
 
             foreach (BoardLocation bl in options)
@@ -300,42 +312,39 @@ namespace HexC
                 bHypothetical.Remove(p);                     // take me off.
                 bHypothetical.Add(new PlacedPiece(p, bl));   // put me on at the destination
 
-                if (false == bHypothetical.CanBeAttacked(p))
+                if (false == bHypothetical.InCheck(p.Color)) // see if i'm in check
                     realOptions.Add(bl);
-
-//                if (false == bHypothetical.InCheck(p.Color)) // see if i'm in check
-//                    realOptions.Add(bl);
             }
             return realOptions;
         }
-
-        // maybe this only applies to kings
-        bool CanBeAttacked(PlacedPiece p)
-        {
-            foreach (PlacedPiece pp in placedPieces)
-            {
-                if (pp.DeepEquals(p)) continue; // i can't attack me
-                if (pp.Color == p.Color) continue; // my color can't attack me
-
-                BoardLocationList bll = WhereCanIReach(pp, true);
-                if (bll.ContainsTheLocation(p.Location))
-                    return true;
-            }
-            return false;
-}
 
         bool CanAttack(PlacedPiece p, PlacedPiece pVictim)
         {
             if (p.Color == pVictim.Color)
                 return false;// can't attack my kind.
 
+            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
             BoardLocationList options = WhereCanIReach(p);
-            //            if (options.Contains(pVictim.Location))
-            if(options.ContainsTheLocation(pVictim.Location))
+            if (options.ContainsTheLocation(pVictim.Location))
                 return true;
 
             return false;
         }
+
+        // Does the placed piece threaten the specific king NOW? How can we tell if we don't know that it puts us in check?
+        bool CanAttackNowNoRecurse(PlacedPiece p, PlacedPiece pVictim)
+        {
+            if (p.Color == pVictim.Color)
+                return false;// can't attack my kind.
+
+            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
+            BoardLocationList options = WhereCanIReach(p, false);
+            if (options.ContainsTheLocation(pVictim.Location))
+                return true;
+
+            return false;
+        }
+
 
         bool InCheck(ColorsEnum c)
         {
@@ -343,25 +352,23 @@ namespace HexC
             PlacedPiece king = FindPiece(PiecesEnum.King, c);
             foreach (PlacedPiece p in placedPieces)
             {
-                if (CanAttack(p, king))
+                //                if (CanAttack(p, king))
+                if (CanAttackNowNoRecurse(p, king))
                     return true;
             }
             return false;
         }
 
-        // fShallow means I don't check if the move puts me in check.
-        BoardLocationList WhereCanIReach ( PlacedPiece p, bool fShallow = false )
+        BoardLocationList WhereCanIReach(PlacedPiece p, bool fRecursePotential = true)
         {
-            switch(p.PieceType)
+            switch (p.PieceType)
             {
                 case PiecesEnum.Knight:
                     {
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
                         options = YankSpotsOfThisColor(options, p.Color);
-                        if(false == fShallow)
-                            options = YankSpotsThatPutMeInCheck(options, p);
-
+                        options = YankSpotsThatPutMeInCheck(options, p);
                         return options;
                     }
 
@@ -373,9 +380,8 @@ namespace HexC
                         BoardLocationList spots = KingStatic.CouldGoIfOmnipotent(p.Location);
                         spots = YankSpotsThatArentBoardSpots(spots);
                         spots = YankSpotsOfThisColor(spots, p.Color); // diddily doo is not handled here!
-                        if(false == fShallow)
+                        if (fRecursePotential)
                             spots = YankSpotsThatPutMeInCheck(spots, p);
-
                         return spots;
                     }
 
@@ -391,12 +397,12 @@ namespace HexC
                         BoardLocationList options = new BoardLocationList();
 
                         List<BoardLocationList> listOfRuns = CastleStatic.ListOfSequencesOfSpots(p.Location);
-                        foreach(BoardLocationList ll in listOfRuns)
+                        foreach (BoardLocationList ll in listOfRuns)
                         {
-                            foreach(BoardLocation l in ll)
+                            foreach (BoardLocation l in ll)
                             {
                                 PlacedPiece pThere = AnyoneThere(l);
-                                if(null == pThere)
+                                if (null == pThere)
                                 {
                                     options.Add(l);
                                     continue;
@@ -411,9 +417,6 @@ namespace HexC
                         }
 
                         options = YankSpotsThatArentBoardSpots(options);
-
-//                        if (false == fShallow)
-//                            options = 
 
                         return options;
                     }
@@ -436,21 +439,17 @@ namespace HexC
                 events.Add(new PieceEvent(deadp, EventTypeEnum.Remove));
 
             // if I jump down the hole, i don't leave this turn standing there.
-            if ((spot.Q != 0) || (spot.R != 0))
-            {
-                PlacedPiece pp = new PlacedPiece(p, spot); // constructor clones me but to a new spot
-                events.Add(new PieceEvent(pp, EventTypeEnum.Add)); // I appear at this spot
-            }
-            else
-            {
-                Console.WriteLine("Hi");
-            }
+            // THIS IS NOW WRONG, BUT HOLE JUMPS SHOULD BE FIGURED OUT EARLIER I *THINK*
+            Debug.Assert(spot.Q != 0 || spot.R != 0 || p.PieceType == PiecesEnum.King); // nobody EXCEPT A KING gets to jump down the hole.
+
+            PlacedPiece pp = new PlacedPiece(p, spot); // constructor clones me but to a new spot
+            events.Add(new PieceEvent(pp, EventTypeEnum.Add)); // I appear at this spot
+
             return events;
         }
 
 
-
-    public List<List<PieceEvent>> WhatCanIDo(PlacedPiece p, bool fdiddilydooit = true )
+        public List<List<PieceEvent>> WhatCanIDo(PlacedPiece p, bool fdiddilydooit = true)
         {
             List<List<PieceEvent>> allPotentialOutcomes = new List<List<PieceEvent>>();
 
@@ -460,7 +459,7 @@ namespace HexC
                     {
                         BoardLocationList spots = WhereCanIReach(p);
                         // we want events associated with each spot
-                        foreach (BoardLocation spot in spots )
+                        foreach (BoardLocation spot in spots)
                         {
                             List<PieceEvent> events = EventsFromAMove(p, spot);
                             allPotentialOutcomes.Add(events);
@@ -529,7 +528,7 @@ namespace HexC
                     Debug.Assert(false); break;
             }
 
-            return allPotentialOutcomes ;
+            return allPotentialOutcomes;
         }
     }
 
@@ -538,12 +537,12 @@ namespace HexC
         ColorsEnum m_first;
         ColorsEnum m_second;
         ColorsEnum m_third;
-//        ColorsEnum m_current;
+        //        ColorsEnum m_current;
 
-        public Game( ColorsEnum first, ColorsEnum second, ColorsEnum third)
+        public Game(ColorsEnum first, ColorsEnum second, ColorsEnum third)
         {
             //m_current = 
-                m_first = first; 
+            m_first = first;
             m_second = second;
             m_third = third;
         }
@@ -566,7 +565,6 @@ namespace HexC
     }
 
 
-
     class Program
     {
         static void ShowBoard(Board b)
@@ -575,10 +573,17 @@ namespace HexC
             {
                 Console.WriteLine("{0} {1} {2} {3}", p.Color, p.PieceType, p.Location.Q, p.Location.R);
             }
+
+            Form1.ShowBoard(b.PlacedPieces);
         }
 
         static void Main(string[] args)
         {
+            Form1.StartMeUp();
+        }
+
+        public static void HCMain()
+        { 
             Board b = new Board();
 
             PlacedPiece king = new PlacedPiece(PiecesEnum.King, ColorsEnum.White, 1, 0);
@@ -644,6 +649,8 @@ namespace HexC
             PlacedPiece castle = new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -2, 0);
             b.Add(castle);
 
+            ShowBoard(b);
+
             options = b.WhatCanIDo(castle);
 
             foreach (List<PieceEvent> could in options)
@@ -674,20 +681,21 @@ namespace HexC
             // bredth first then it is.
 
             // throw kings on there
-            PlacedPiece blackKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, 1, 1);
-            b.Add(blackKing);
-            PlacedPiece brownKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Brown, -2, -1);
+            //            PlacedPiece whiteKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.White, -3, -1);
+            // already there:            b.Add(whiteKing);
+            PlacedPiece brownKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Tan, -4, -1);
             b.Add(brownKing);
+            PlacedPiece blackKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -1, 3);
+            b.Add(blackKing);
+            ShowBoard(b);
 
-            List<List<PieceEvent>> duhmyoptions = b.WhatCanIDo(brownKing);
-
-            Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Brown);
+            Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Tan);
             foreach (ColorsEnum color in g.NextThree)
             {
                 Dictionary<PlacedPiece, List<List<PieceEvent>>> everyOption = new Dictionary<PlacedPiece, List<List<PieceEvent>>>();
 
                 // for each piece of this color, what can it cause?
-                foreach ( PlacedPiece p in b.PlacedPiecesThisColor(color))
+                foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
                 {
                     // I want enough data to spawn next moves from a "possibleMove"
                     // I kinda want to know how "objectively" the future step differs from the current step
@@ -704,7 +712,7 @@ namespace HexC
                 }
             }
 
-            foreach( PlacedPiece p in b.PlacedPieces )
+            foreach (PlacedPiece p in b.PlacedPieces)
             {
 
 
@@ -740,3 +748,5 @@ namespace HexC
         }
     }
 }
+
+// pants
