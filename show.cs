@@ -52,8 +52,8 @@ namespace HexC
             HexC.Program.HCMain();
         }
 
-        const int SIZEY = 40;
-        const int OFFSET = 250;
+        const int SIZEY = 60;
+        const int OFFSET = 200;
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -61,8 +61,8 @@ namespace HexC
                 return;
             Graphics g = e.Graphics;
 
-            for (int q = -5; q < 5; q++)
-                for (int r = -5; r < 5; r++)
+            for (int q = -5; q <= 5; q++)
+                for (int r = -5; r <= 5; r++)
                 {
                     int x = q * SIZEY;
                     int y = (r * SIZEY) / 2;
@@ -77,11 +77,14 @@ namespace HexC
                             {
                                 s = p.Color.ToString().Substring(0, 1) + p.PieceType.ToString().Substring(0, 2);
                                 bold = true;
-                                
                             }
                     }
 
-                    g.DrawString(s, SystemFonts.DialogFont, bold ? SystemBrushes.ControlDarkDark : SystemBrushes.Highlight, (float)(x * .7) + OFFSET, y + OFFSET);
+                    BoardLocation bl = new BoardLocation(q, r);
+                    if (bl.IsValidLocation())
+                    {
+                        g.DrawString(s, SystemFonts.DialogFont, bold ? SystemBrushes.ControlDarkDark : SystemBrushes.Highlight, (float)(x * .6) + OFFSET, y + OFFSET);
+                    }
                 }
         }
 

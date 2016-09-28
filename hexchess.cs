@@ -45,12 +45,12 @@ namespace HexC
             List<BoardLocationList> ll = new List<BoardLocationList>();
 
             // SEQUENCE of these matters, radiating out from the piece.
-            int[,] StarOne =  { { 1, -1 }, { 2, -2 }, { 3, -3 }, { 4, -4 }, { 5, -5 } };
-            int[,] StarTwo = { { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 }, { 5, 0 } };
-            int[,] StarThr =  { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 0, 4 }, { 0, 5 } };
-            int[,] StarFou = { { -1, 1 }, { -2, 2 }, { -3, 3 }, { -4, 4 }, { -5, 5 } };
-            int[,] StarFiv = { { -1, 0 }, { -2, 0 }, { -3, 0 }, { -4, 0 }, { -5, 0 } };
-            int[,] StarSix =  { { 0, -1 }, { 0, -2 }, { 0, -3 }, { 0, -4 }, { 0, -5 } };
+            int[,] StarOne = { { 1, -1 }, { 2, -2 }, { 3, -3 }, { 4, -4 }, { 5, -5 }, { 6, -6 }, { 7, -7 }, { 8, -8 }, { 9, -9 }, { 10, -10 } };
+            int[,] StarTwo = { { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 }, { 5, 0 }, { 6, 0 }, { 7, 0 }, { 8, 0 }, { 9, 0 }, { 10, 0 } };
+            int[,] StarThr =  { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 0, 4 }, { 0, 5 }, { 0, 6 }, { 0, 7 }, { 0, 8 }, { 0, 9 }, { 0, 10 } };
+            int[,] StarFou = { { -1, 1 }, { -2, 2 }, { -3, 3 }, { -4, 4 }, { -5, 5 }, { -6, 6 }, { -7, 7 }, { -8, 8 }, { -9, 9 }, { -10, 10 } };
+            int[,] StarFiv = { { -1, 0 }, { -2, 0 }, { -3, 0 }, { -4, 0 }, { -5, 0 }, { -6, 0 }, { -7, 0 }, { -8, 0 }, { -9, 0 }, { -10, 0 } };
+            int[,] StarSix =  { { 0, -1 }, { 0, -2 }, { 0, -3 }, { 0, -4 }, { 0, -5 }, { 0, -6 }, { 0, -7 }, { 0, -8 }, { 0, -9 }, { 0, -10 } };
 
             ll.Add(CookUpLocations(loc, StarOne));
             ll.Add(CookUpLocations(loc, StarTwo));
@@ -94,8 +94,13 @@ namespace HexC
 
         public bool IsValidLocation()
         {
-            if (Math.Abs(q) > 5) return false;
-            if (Math.Abs(r) > 5) return false;
+            if (q > 5) return false;
+            if (r > 5) return false;
+            if (q < -5) return false;
+            if (r < -5) return false;
+            if (q + r > 5) return false;
+            if (q + r < -5) return false;
+
             return true;
         }
 
@@ -301,7 +306,7 @@ namespace HexC
 
         BoardLocationList YankSpotsThatPutMeInCheck(BoardLocationList options, PlacedPiece p)
         {
-            Console.WriteLine("A {1} {0} removes spots that put their team in check.", p.PieceType.ToString(), p.Color.ToString());
+//            Console.WriteLine("A {1} {0} removes spots that put their team in check.", p.PieceType.ToString(), p.Color.ToString());
 
             BoardLocationList realOptions = new BoardLocationList();
 
@@ -311,6 +316,9 @@ namespace HexC
                 Board bHypothetical = new Board(this);     // clone meeeee
                 bHypothetical.Remove(p);                     // take me off.
                 bHypothetical.Add(new PlacedPiece(p, bl));   // put me on at the destination
+
+                // I wanna see this board.
+                Program.ShowBoard(bHypothetical);
 
                 if (false == bHypothetical.InCheck(p.Color)) // see if i'm in check
                     realOptions.Add(bl);
@@ -323,7 +331,7 @@ namespace HexC
             if (p.Color == pVictim.Color)
                 return false;// can't attack my kind.
 
-            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
+//            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
             BoardLocationList options = WhereCanIReach(p);
             if (options.ContainsTheLocation(pVictim.Location))
                 return true;
@@ -337,7 +345,7 @@ namespace HexC
             if (p.Color == pVictim.Color)
                 return false;// can't attack my kind.
 
-            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
+//            Console.WriteLine("A {3} {0} at {1},{2} wonders where it can reach.", p.PieceType, p.Location.Q, p.Location.R, p.Color);
             BoardLocationList options = WhereCanIReach(p, false);
             if (options.ContainsTheLocation(pVictim.Location))
                 return true;
@@ -359,7 +367,10 @@ namespace HexC
             return false;
         }
 
-        BoardLocationList WhereCanIReach(PlacedPiece p, bool fRecursePotential = true)
+        // a shallow check sees where i can reach without regard to whetehr it puts me into check doing it.
+        // (a king can't end up in a position where i can reach it, even if me doing so is prevented cuz the move would put me in check)
+
+        BoardLocationList WhereCanIReach(PlacedPiece p, bool fShallowCheck = true)
         {
             switch (p.PieceType)
             {
@@ -368,7 +379,8 @@ namespace HexC
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
                         options = YankSpotsOfThisColor(options, p.Color);
-                        options = YankSpotsThatPutMeInCheck(options, p);
+                        if(fShallowCheck)
+                            options = YankSpotsThatPutMeInCheck(options, p);
                         return options;
                     }
 
@@ -380,7 +392,7 @@ namespace HexC
                         BoardLocationList spots = KingStatic.CouldGoIfOmnipotent(p.Location);
                         spots = YankSpotsThatArentBoardSpots(spots);
                         spots = YankSpotsOfThisColor(spots, p.Color); // diddily doo is not handled here!
-                        if (fRecursePotential)
+                        if (fShallowCheck)
                             spots = YankSpotsThatPutMeInCheck(spots, p);
                         return spots;
                     }
@@ -417,6 +429,8 @@ namespace HexC
                         }
 
                         options = YankSpotsThatArentBoardSpots(options);
+                        if(fShallowCheck)
+                            options = YankSpotsThatPutMeInCheck(options, p);
 
                         return options;
                     }
@@ -567,12 +581,14 @@ namespace HexC
 
     class Program
     {
-        static void ShowBoard(Board b)
+        public static void ShowBoard(Board b)
         {
+            /*
             foreach (PlacedPiece p in b.PlacedPieces)
             {
                 Console.WriteLine("{0} {1} {2} {3}", p.Color, p.PieceType, p.Location.Q, p.Location.R);
             }
+            */
 
             Form1.ShowBoard(b.PlacedPieces);
         }
@@ -583,8 +599,10 @@ namespace HexC
         }
 
         public static void HCMain()
-        { 
+        {
             Board b = new Board();
+
+            /*
 
             PlacedPiece king = new PlacedPiece(PiecesEnum.King, ColorsEnum.White, 1, 0);
             b.Add(king);
@@ -646,13 +664,32 @@ namespace HexC
 
             Console.WriteLine();
 
-            PlacedPiece castle = new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -2, 0);
-            b.Add(castle);
+            */
+            
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -1, -4));
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -4, -1));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
+            b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -2, -3));
+
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -1, 5));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -3, 4));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -2, 4));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -1, 4));
+            b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Tan, -3, 5));
+
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.White, 5, -4));
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.White, 5, -1));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -3));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -2));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -1));
+            b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.White, 5, -3));
 
             ShowBoard(b);
 
-            options = b.WhatCanIDo(castle);
-
+            /*
             foreach (List<PieceEvent> could in options)
             {
                 Board bTheoretical = new Board(b); // clone!
@@ -672,6 +709,7 @@ namespace HexC
                 Console.WriteLine("a castle move could result in this:");
                 ShowBoard(bTheoretical);
             }
+            */
 
 
             // for each piece, see what it can do.
@@ -683,11 +721,10 @@ namespace HexC
             // throw kings on there
             //            PlacedPiece whiteKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.White, -3, -1);
             // already there:            b.Add(whiteKing);
-            PlacedPiece brownKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Tan, -4, -1);
-            b.Add(brownKing);
-            PlacedPiece blackKing = new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -1, 3);
-            b.Add(blackKing);
-            ShowBoard(b);
+
+            ///////////////////////////////////////////////////////////////////////
+            ///////////////////////////////////////////////////////////////////////
+            ///////////////////////////////////////////////////////////////////////
 
             Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Tan);
             foreach (ColorsEnum color in g.NextThree)
@@ -697,32 +734,52 @@ namespace HexC
                 // for each piece of this color, what can it cause?
                 foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
                 {
-                    // I want enough data to spawn next moves from a "possibleMove"
-                    // I kinda want to know how "objectively" the future step differs from the current step
-                    // as in points or something.
-                    // so are we supposed to store this piece as they key to this move?
-                    // well that seems to be how we're doing it here.
-                    // each piece can result in potential outcomes.
-                    // and i will need some kind of accounting of ideas here.
                     // so yeah each piece is a unique key to a set of possible outcomes.
                     // even pawns who do an escape move?
                     // yeah... uh, yeah. any pawn could be the trigger piece... what matters is the board outcome.
+
                     List<List<PieceEvent>> myoptions = b.WhatCanIDo(p);
                     everyOption.Add(p, myoptions);
                 }
+                Dictionary<PlacedPiece, List<PieceEvent>> myCaptureChoices = new Dictionary<PlacedPiece, List<PieceEvent>>();
+                foreach (var li in everyOption)
+                {
+                    // they key is the piece. the list for that key is what moves that piece can do.
+                    // so tell me if any moves cause a capture.
+                    foreach (var mov in li.Value)
+                    {
+                        // just look for three events, cuz one would be a remove.
+                        if (mov.Count == 3)
+                        {
+                            // what do we remove?
+                            foreach (var who in mov)
+                            {
+                                // if it's the key, we don't care about it.
+                                if (who.Regarding.PieceType == li.Key.PieceType)
+                                    if (who.Regarding.Color == li.Key.Color)
+                                        continue;
+
+                                // ok it's a capture. let's associate this move with the capture
+                                Console.WriteLine("{0} could take {1}", li.Key.Color.ToString() + li.Key.PieceType.ToString(), who.Regarding.Color.ToString() + who.Regarding.PieceType.ToString());
+                                myCaptureChoices.Add(li.Key, mov);
+                            }
+                        }
+                    }
+                }
+
+                // Just choose the first capture choice.
+                // ridonk
             }
+
+            ShowBoard(b);
 
             foreach (PlacedPiece p in b.PlacedPieces)
             {
-
-
             }
 
-            // should i do a test harness?
-
+            // should i do a test harness? Hell yeah.
 
             // Can I attack into the center, with both my own piece and the center piece falling?
-
             // Can I attack a piece and cause a regeneration of my own piece based on this event?
 
             // Put a king and a queen side-by-side, and see diddily-doos.
