@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System;
@@ -83,17 +83,23 @@ namespace HexC
                     BoardLocation bl = new BoardLocation(q, r);
                     if (bl.IsValidLocation())
                     {
+                        if(m_highlights.ContainsTheLocation(bl))
+                        {
+                            g.DrawString(s, SystemFonts.DialogFont, bold ? SystemBrushes.ControlText : SystemBrushes.Highlight, (float)(x * .6) + OFFSET - 1, y + OFFSET - 2);
+                        }
                         g.DrawString(s, SystemFonts.DialogFont, bold ? SystemBrushes.ControlDarkDark : SystemBrushes.Highlight, (float)(x * .6) + OFFSET, y + OFFSET);
                     }
                 }
         }
 
         static List<PlacedPiece> m_pp = null;
+        static BoardLocationList m_highlights = null;
         static Form1 m_form = null;
 
-        static public void ShowBoard(List<PlacedPiece> pp)
+        static public void ShowBoard(List<PlacedPiece> pp, BoardLocationList highlights)
         {
             m_pp = pp;
+            m_highlights = highlights;
             m_form.Refresh();
 //            m_form.Update();
         }
