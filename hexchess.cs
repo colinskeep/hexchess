@@ -103,6 +103,16 @@ namespace HexC
             return true;
         }
 
+        public bool IsPortal
+        {
+            get
+            {
+                if (q == 0 && r == 0)
+                    return true;
+                return false;
+            }
+        }
+
         public int Q { get { return q; } }
         public int R { get { return r; } }
 
@@ -259,6 +269,10 @@ namespace HexC
                     Debug.Assert(null == this.FindPiece(PiecesEnum.King, p.Color));
                     break;
 
+                case PiecesEnum.Queen:
+                    Debug.Assert(null == this.FindPiece(PiecesEnum.Queen, p.Color));
+                    break;
+
                     // others need checks
             }
             placedPieces.Add(p);
@@ -314,7 +328,7 @@ namespace HexC
             {
                 if (b.IsValidLocation())
                 {
-                    if (b.Q == 0 && b.R == 0)
+                    if (b.IsPortal)
                         if (false == isAKing)
                             continue; // zero zero is only valid for a king.
                         
@@ -429,7 +443,7 @@ namespace HexC
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
                         options = YankSpotsOfThisColor(options, p.Color);
-                        if(fShallowCheck)
+                        if (fShallowCheck)
                             options = YankSpotsThatPutMeInCheck(options, p);
                         return options;
                     }
@@ -447,6 +461,20 @@ namespace HexC
                         return spots;
                     }
 
+                /*                case PiecesEnum.Queen:
+                                    {
+                                        // #1 : pretend i'm a castle, cuz i have all those moves!
+                                        //    a. shove a castle where the queen is???
+                                        // and what about the diddily doo?????
+                                        BoardLocationList queenDests = WhereCanIReach()
+                                        // #2 : My triple jumps need routes+
+                                        //BoardLocationList spots = QueenStatic.CouldGoIfOmnipotent(p.Location);
+                                        Debug.Assert(false);
+                                        return null;
+                                    }
+                                    */
+
+                case PiecesEnum.Queen: // a queen is a castle plus other magic!
                 case PiecesEnum.Castle:
                     {
                         // radiating outward seems to make more sense.
@@ -463,7 +491,7 @@ namespace HexC
                         {
                             foreach (BoardLocation l in ll)
                             {
-                                if (l.R == 0 && l.Q == 0)
+                                if (l.IsPortal)
                                     break; // run is over!
 
                                 PlacedPiece pThere = AnyoneThere(l);
@@ -478,15 +506,27 @@ namespace HexC
                                 options.Add(pThere.Location);
                                 break; // run is over!
                             }
-
                         }
 
                         options = YankSpotsThatArentBoardSpots(options);
-                        if(fShallowCheck)
+                        if (fShallowCheck)
                             options = YankSpotsThatPutMeInCheck(options, p);
 
-                        return options;
+                        if (PiecesEnum.Castle == p.PieceType)
+                            return options;
+
+                        // IF WE GET THIS FAR, THE PIECE IS A QUEEN.
+
+                        BoardLocationList soFar = new BoardLocationList();
+                        soFar.Add(p.Location); // my first location is where I'm at
+                        WalkToSameColorStarSpots(0, soFar);
+
+                        Debug.Assert(false);
+//                        foreach (BoardLocation spot in m_gValidDesties)
+//                            Console.WriteLine(spot.Location);
                     }
+
+                    return null;
 
                 default:
                     Debug.Assert(false);
@@ -494,22 +534,89 @@ namespace HexC
             }
         }
 
-        List<PieceEvent> EventsFromAMove(PlacedPiece p, BoardLocation spot)
+
+        BoardLocationList WhereCanQueenWalk(BoardLocation fromHere)
+        {
+            BoardLocationList destys = new BoardLocationList();
+
+            int[,] WalkOptions = { { 1, -2 }, { 2, -1 }, { 1, 1 }, { -1, 2 }, { -2, 1 }, { -1, -1 } };
+            int[,] RouteOne    = { { 0, -1 }, { 1, -1 }, { 1, 0 }, {  0, 1 }, { -1, 1 }, { -1,  0 } };
+            int[,] RouteTwo    = { { 1, -1 }, { 1, 0 }, { 0, 1 },  { -1, 1 }, { -1, 0 }, {  0, -1 } };
+
+            for (int iSet = 0; iSet < WalkOptions.GetLength(0); iSet++)
+            {
+                BoardLocation to = new BoardLocation(fromHere.Q + WalkOptions[iSet, 0], fromHere.R + WalkOptions[iSet, 1]);
+                if (true == to.IsValidLocation())
+                    if (null == this.AnyoneThere(to))
+                    {
+                        PlacedPiece one = this.AnyoneThere(new BoardLocation(fromHere.Q + RouteOne[iSet, 0], fromHere.R + RouteOne[iSet, 1]));
+                        PlacedPiece two = this.AnyoneThere(new BoardLocation(fromHere.Q + RouteTwo[iSet, 0], fromHere.R + RouteTwo[iSet, 1]));
+                        if(null == one || null == two )
+                            destys.Add(to);
+                    }
+            }
+            return destys;
+        }
+
+    void WalkToSameColorStarSpots(int level, BoardLocationList pathSoFar)
+        {
+            ++level;
+
+            if (3 == level)
+            {
+                // on our third step, we ask: am i ool with this three steps?
+                // can't be any diplicates
+                // if no duplicates, add all three to options list
+                Debug.Assert(false);
+                // if (NotAlreadyInList(m_gValidDestinations, pathsoFar[highest])
+                //                    m_gValidDestinations.Add(pathSoFar[highest] ;
+            }
+
+            foreach (var spot in WhereCanQueenWalk(pathSoFar[pathSoFar.Count - 1]))
+            {
+                pathSoFar.Add(spot);
+                WalkToSameColorStarSpots(level, pathSoFar);
+            }
+        }
+
+    List<PieceEvent> EventsFromAMove(PlacedPiece p, BoardLocation spot)
         {
             List<PieceEvent> events = new List<PieceEvent>();
 
             events.Add(new PieceEvent(p, EventTypeEnum.Remove)); // I leave this spot
 
             // if anyone was standing where I've landed, they aren't anymore.
-            // AND if any of my pieces of this type are sidelined, that piece appears at 0,0!
+            // AND if any of my pieces of this type are sidelined, and nobody's blocking the portal, that piece appears at 0,0!
             PlacedPiece deadp = this.AnyoneThere(spot);
             if (null != deadp)
             {
                 events.Add(new PieceEvent(deadp, EventTypeEnum.Remove));
-                if (sidelined.ContainsThePiece(deadp.PieceType, p.Color))
+                if(null != this.AnyoneThere(new BoardLocation(0,0))) // u blockin my portal?
+                    if (sidelined.ContainsThePiece(deadp.PieceType, p.Color))
                     {
                     events.Add(new PieceEvent(new PlacedPiece(deadp.PieceType, p.Color, 0, 0), EventTypeEnum.Add));
-// we don't remove it here!                    sidelined.RemoveThePiece (deadp.PieceType, p.Color);
+                    // we don't remove it here!                    sidelined.RemoveThePiece (deadp.PieceType, p.Color);
+                    }
+            }
+
+            // if my piece is in the portal, a move of any other piece causes my piece to return to sidelines.
+            if(p.Location.IsPortal)
+            {
+                // i'm moving the piece from the portal... so there's no portal issue involving this move.
+            }
+            else
+            {
+                // i'm moving a piece that isn't in the portal.
+                // so is there a piece in the portal?
+                PlacedPiece portalJoe = this.AnyoneThere(new BoardLocation(0, 0));
+                if(null != portalJoe)
+                {
+                    // is the portal piece same color as the mover of this move?
+                    if(p.Color == portalJoe.Color)
+                    {
+                        // same color? then this piece dies in this move.
+                        events.Add(new PieceEvent(portalJoe, EventTypeEnum.Remove));
+                    }
                 }
             }
 
@@ -593,9 +700,13 @@ namespace HexC
                     }
 
                 case PiecesEnum.Queen:
-                    // King and queen have optional "free move" together.
-                    // Must seek paths
-                    Debug.Assert(false); break;
+                    {
+                        // King and queen have optional "free move" together.
+                        // Must seek paths
+                        BoardLocationList spots = WhereCanIReach(p);
+
+                        Debug.Assert(false); break;
+                    }
 
                 case PiecesEnum.Pawn:
                     // can croass the board and xform!
@@ -736,9 +847,11 @@ namespace HexC
             
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -1, -4));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -4, -1));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
+//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
+//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
+//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
+            PlacedPiece ppq = new PlacedPiece(PiecesEnum.Queen, ColorsEnum.Black, -3, -2);
+            b.Add(ppq);
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -2, -3));
 
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
@@ -757,8 +870,11 @@ namespace HexC
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -2));
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -1));
             b.Add(new Piece(PiecesEnum.Castle, ColorsEnum.White)); // I have a castle on the sidelines.
-            //            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
+                                                                   //            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
 
+            ShowBoard(b);
+
+            List<List<PieceEvent>> options = b.WhatCanIDo(ppq);
 
             ShowBoard(b);
 
@@ -775,76 +891,112 @@ namespace HexC
             ///////////////////////////////////////////////////////////////////////
             ///////////////////////////////////////////////////////////////////////
 
+            // Game knows the sequence of turns
+
+            /*
             Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Tan);
-            foreach (ColorsEnum color in g.NextThree)
+
+            int iNextOppoMax;
+            int iOppoAfterThatMax;
+            int iMyGuaranteedMin;
+            TellMeOptionsWithTwoMaxesOneGuaranteedMin(g, b, out iNextOppoMax, out iOppoAfterThatMax, out iMyGuaranteedMin);
+
+            for (int iTurnsIntoFuture = 0; iTurnsIntoFuture < 3; iTurnsIntoFuture++)
             {
-                Dictionary<PlacedPiece, List<List<PieceEvent>>> everyOption = new Dictionary<PlacedPiece, List<List<PieceEvent>>>();
-
-                // for each piece of this color, what can it cause?
-                foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
+                foreach (ColorsEnum color in g.NextThree)
                 {
-                    // so yeah each piece is a unique key to a set of possible outcomes.
-                    // even pawns who do an escape move?
-                    // yeah... uh, yeah. any pawn could be the trigger piece... what matters is the board outcome.
+                    Dictionary<PlacedPiece, List<List<PieceEvent>>> everyOption = new Dictionary<PlacedPiece, List<List<PieceEvent>>>();
+                    // HEY, IT'S JUST NOT OK TO REMEMBER WHICH PIECE CAUSED THE EVENTS.
+                    // well, it is ok. it's just not critical.
 
-                    List<List<PieceEvent>> myoptions = b.WhatCanIDo(p);
-                    FlashSpots(b, p, myoptions);
-                    everyOption.Add(p, myoptions);
-                }
-
-                // My team's options, analyzed
-                Dictionary<PlacedPiece, List<PieceEvent>> myCaptureChoices = new Dictionary<PlacedPiece, List<PieceEvent>>();
-                foreach (var li in everyOption)
-                {
-                    // they key is the piece. the list for that key is what moves that piece can do.
-                    // so tell me if any moves cause a capture.
-                    bool fKingWin = false;
-
-                    foreach (var mov in li.Value)
+                    // for each piece of this color, what can it cause?
+                    foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
                     {
-                        // if king ends up in hole, we'll note that thanks
-                        foreach(var scan in mov)
+                        // so yeah each piece is a unique key to a set of possible outcomes.
+                        // even pawns who do an escape move?
+                        // yeah... uh, yeah. any pawn could be the trigger piece... what matters is the board outcome.
+
+                        List<List<PieceEvent>> myoptions = b.WhatCanIDo(p);
+                        FlashSpots(b, p, myoptions);
+                        // This will need to be one tree, because we're saying throw out the intermediate steps?
+                        // re-create them all, i mean???
+                        // each time? like this? 
+                        // this is going to be slow, might be painfully slow.
+                        // But we can probably think of it this way first.
+                        List<int> myGuaranteedMins = MyGuaranteedMins(b, color, myoptions);
+                        List<int> nextPlayersPotentialMaxes = NextPlayersPotentialMaxes(b, g.After(color), myoptions);
+                        List<int> thirdPlayersPotentialMaxes = ThirdPlayersPotentialMaxes(b, g.After(g.After(color)), myoptions);
+                        Debug.Assert(myoptions.Count() == myGuaranteedMins.Count() == nextPlayersPotentialMaxes.Count() == thirdPlayersPotentialMaxes.Count());
+                        everyOption.Add(p, myoptions, myGuaranteedMins, nextPlayersPotentialMaxes, thirdPlayersPotentialMaxes);
+                    }
+
+                    // My team's options, analyzed
+                    Dictionary<PlacedPiece, List<PieceEvent>> myMoveOptions = new Dictionary<PlacedPiece, List<PieceEvent>>();
+                    foreach (var li in everyOption)
+                    {
+                        // they key is the piece. the list for that key is 21what moves that piece can do.
+                        // so tell me if any moves cause a capture.
+                        bool fKingWin = false;
+
+                        foreach (var mov in li.Value)
                         {
-                            if (scan.Regarding.PieceType == PiecesEnum.King)
-                                if (scan.Regarding.Location.Q == 0 && scan.Regarding.Location.R == 0)
-                                {
-                                    fKingWin = true;
-                                    break;
-                                }
-                        }
-                        // just look >= three events, cuz one would be a remove.
-                        if (mov.Count >= 3 || fKingWin)
-                        {
-                            string extraSnippet = "";
-                            // what do we remove?
-                            foreach (var who in mov)
+                            // if king ends up in hole, we'll note that thanks
+                            foreach (var scan in mov)
                             {
-                                // if it's on 0,0, give that piece a note.
-                                if (fKingWin)
-                                    extraSnippet = "King goes down portal for win.";
-                                else
-                                    if (who.Regarding.Location.Q == 0 && who.Regarding.Location.R == 0)
+                                if (scan.Regarding.PieceType == PiecesEnum.King)
+                                    if (scan.Regarding.Location.IsPortal)
+                                    {
+                                        fKingWin = true;
+                                        break;
+                                    }
+                            }
+                            // just look >= three events, cuz one would be a remove.
+                            // REMEMBER HERE WE'RE JUST TOYING WITH *ONLY* CONSIDERING CAPTURE SCENARIOS
+                            // IN DEVELOPING AN AI. SOUNDS DOOMED. AND PIECE-UNMOVED OR PIECE-PORTALLED 
+                            // MAKE THIS RESTRICTION MY MOVE COUNT DOOMED.
+                            // don't we track every potential move?
+                            // yes... BUT... i want to try this...
+                            // i want a limited set of events to consider.
+
+                            //                        if (mov.Count >= 3 || fKingWin)
+                            // just fucking do this for every scenario,
+                            {
+                                string extraSnippet = "";
+                                // what do we remove?
+                                foreach (var who in mov)
+                                {
+                                    // if it's on 0,0, give that piece a note.
+                                    if (fKingWin)
+                                        extraSnippet = "King goes down portal for win.";
+                                    else
+                                        if (who.Regarding.Location.IsPortal)
                                         extraSnippet = string.Format(", and gain a {0} at the portal, ", li.Key.PieceType.ToString());
 
-                                // Other than popups in the portal, 
-                                if (who.Regarding.PieceType == li.Key.PieceType)
-                                    if (who.Regarding.Color == li.Key.Color)
-                                        continue;
+                                    // Other than popups in the portal, 
+                                    if (who.Regarding.PieceType == li.Key.PieceType)
+                                        if (who.Regarding.Color == li.Key.Color)
+                                            continue;
 
-                                // ok it's a capture. let's associate this move with the capture
-                                Console.Write("{0} could take {1}", li.Key.Color.ToString() + li.Key.PieceType.ToString(), who.Regarding.Color.ToString() + who.Regarding.PieceType.ToString());
-                                myCaptureChoices.Add(li.Key, mov);
+                                    // ok it's a capture. let's associate this move with the capture
+                                    Console.Write("{0} could take {1}", li.Key.Color.ToString() + li.Key.PieceType.ToString(), who.Regarding.Color.ToString() + who.Regarding.PieceType.ToString());
+                                    myMoveOptions.Add(li.Key, mov);
+                                }
+                                Console.WriteLine(extraSnippet);
                             }
-                            Console.WriteLine(extraSnippet);
                         }
                     }
+
+                    // I calculated all the options my pieces have.
+                    // now FOR EACH OPTION, i ask what the next player COULD do.
+                    // and i determine (a) the minimum GUARANTEED gain for me and (b) maximum POSSIBLE gain for the other playerS
+                    // so this set of myMoveOptions... would contain two or four numbers (a & b for my two opponents)
+                    // isn't there just ONE (a) and 2 (b)'s?
                 }
 
-                // Just choose the first capture choice.
-                // ridonk
+                ShowBoard(b);
             }
 
-            ShowBoard(b);
+            // starting with white for some reason, we've thought 3 moves ahead?!
 
             // Can I attack into the center, with both my own piece and the center piece falling?
             // Can I attack a piece and cause a regeneration of my own piece based on this event?
@@ -854,6 +1006,8 @@ namespace HexC
             // Pawns can step out of a group, the mob it's called
             // make a mob and watch it generate many (96?) breakout positions.
             // That would affirm Stephan's research.
+
+    */
         }
     }
 }
