@@ -11,7 +11,7 @@ namespace HexC
     public enum ColorsEnum { White, Tan, Black }
 
     // these numbers are the axial coordinate system on a flat-topped hex board.
-    // let's change them to pointy-topped!
+    // let's change them to pointy-topped! (geez, i hope i did this.)
     // http://www.redblobgames.com/grids/hexagons/
 
     class KingStatic : PieceStatic
@@ -101,6 +101,15 @@ namespace HexC
             if (q + r < -5) return false;
 
             return true;
+        }
+
+        static public bool IsSameLocation(BoardLocation one, BoardLocation two)
+        {
+            if (one.Q == two.Q)
+                if (one.R == two.R)
+                    return true;
+
+            return false;
         }
 
         public bool IsPortal
@@ -562,10 +571,15 @@ namespace HexC
         {
             ++level;
 
-            if (3 == level)
+            if (4 == level)
             {
-                // on our third step, we ask: am i ool with this three steps?
-                // can't be any diplicates
+                // on our third step, we ask: am i cool with these three steps?
+                // 1. can't be any duplicates.
+///                if (BoardLocation.IsSameLocation(pathSoFar[0], pathSoFar[2])) // can't return to where we started
+   //                 fail;
+     //           if (BoardLocation.IsSameLocation(pathSoFar[1], pathSoFar[2])) // can't 
+       //             fail;
+         //           xxx
                 // if no duplicates, add all three to options list
                 Debug.Assert(false);
                 // if (NotAlreadyInList(m_gValidDestinations, pathsoFar[highest])
