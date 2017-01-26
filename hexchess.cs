@@ -525,17 +525,19 @@ namespace HexC
                             return options;
 
                         // IF WE GET THIS FAR, THE PIECE IS A QUEEN.
-
+                        m_QueenDesties = new BoardLocationList();
                         BoardLocationList soFar = new BoardLocationList();
                         soFar.Add(p.Location); // my first location is where I'm at
                         WalkToSameColorStarSpots(0, soFar);
 
-                        Debug.Assert(false);
-//                        foreach (BoardLocation spot in m_gValidDesties)
-//                            Console.WriteLine(spot.Location);
-                    }
+                        foreach (BoardLocation b in m_QueenDesties)
+                            options.Add(b);
 
-                    return null;
+                        return options;
+
+//                        Program.ShowBoard(this);
+//                        Program.FlashSpots(this, p, m_QueenDesties);
+                    }
 
                 default:
                     Debug.Assert(false);
@@ -567,30 +569,42 @@ namespace HexC
             return destys;
         }
 
+        public static BoardLocationList m_QueenDesties = new BoardLocationList();
+
     void WalkToSameColorStarSpots(int level, BoardLocationList pathSoFar)
         {
+//            if (level == -1)
+//                return;
+
             ++level;
 
             if (4 == level)
             {
                 // on our third step, we ask: am i cool with these three steps?
                 // 1. can't be any duplicates.
-///                if (BoardLocation.IsSameLocation(pathSoFar[0], pathSoFar[2])) // can't return to where we started
-   //                 fail;
-     //           if (BoardLocation.IsSameLocation(pathSoFar[1], pathSoFar[2])) // can't 
-       //             fail;
-         //           xxx
-                // if no duplicates, add all three to options list
-                Debug.Assert(false);
-                // if (NotAlreadyInList(m_gValidDestinations, pathsoFar[highest])
-                //                    m_gValidDestinations.Add(pathSoFar[highest] ;
+
+                int[,] Spots = { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 1, 2 }, { 1, 3 }, { 2, 3 } };
+                for(int iSet = 0; iSet < Spots.GetLength(0); iSet++)
+                {
+                    if (BoardLocation.IsSameLocation(pathSoFar[Spots[iSet, 0]], pathSoFar[Spots[iSet, 1]]))
+                        return;
+                }
+
+                // 2. if no duplicates, then is this destination in our global list of available destinations?
+                if (false == m_QueenDesties.ContainsTheLocation(pathSoFar[3]))
+                    m_QueenDesties.Add(pathSoFar[3]);
+
+//                level = -1;
+                return;
             }
 
             foreach (var spot in WhereCanQueenWalk(pathSoFar[pathSoFar.Count - 1]))
             {
                 pathSoFar.Add(spot);
                 WalkToSameColorStarSpots(level, pathSoFar);
+                pathSoFar.RemoveAt(pathSoFar.Count - 1);
             }
+
         }
 
     List<PieceEvent> EventsFromAMove(PlacedPiece p, BoardLocation spot)
@@ -719,7 +733,13 @@ namespace HexC
                         // Must seek paths
                         BoardLocationList spots = WhereCanIReach(p);
 
-                        Debug.Assert(false); break;
+                        // we want events associated with each spot
+                        foreach (BoardLocation spot in spots)
+                        {
+                            List<PieceEvent> events = EventsFromAMove(p, spot);
+                            allPotentialOutcomes.Add(events);
+                        }
+                        return allPotentialOutcomes;
                     }
 
                 case PiecesEnum.Pawn:
@@ -889,139 +909,140 @@ namespace HexC
             ShowBoard(b);
 
             List<List<PieceEvent>> options = b.WhatCanIDo(ppq);
-
+            
             ShowBoard(b);
+            FlashSpots(b, ppq, options);
 
             // from here, we only know Game, not Board.
 
 
-            // for each piece, see what it can do.
-            // and for each outcome, see what the next player can do
-            // and for each outcome, see what the third player can do
-            // this is already insane. we'll see.
-            // bredth first then it is.
+        // for each piece, see what it can do.
+        // and for each outcome, see what the next player can do
+        // and for each outcome, see what the third player can do
+        // this is already insane. we'll see.
+        // bredth first then it is.
 
-            ///////////////////////////////////////////////////////////////////////
-            ///////////////////////////////////////////////////////////////////////
-            ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
 
-            // Game knows the sequence of turns
+        // Game knows the sequence of turns
 
-            /*
-            Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Tan);
+        /*
+        Game g = new Game(ColorsEnum.White, ColorsEnum.Black, ColorsEnum.Tan);
 
-            int iNextOppoMax;
-            int iOppoAfterThatMax;
-            int iMyGuaranteedMin;
-            TellMeOptionsWithTwoMaxesOneGuaranteedMin(g, b, out iNextOppoMax, out iOppoAfterThatMax, out iMyGuaranteedMin);
+        int iNextOppoMax;
+        int iOppoAfterThatMax;
+        int iMyGuaranteedMin;
+        TellMeOptionsWithTwoMaxesOneGuaranteedMin(g, b, out iNextOppoMax, out iOppoAfterThatMax, out iMyGuaranteedMin);
 
-            for (int iTurnsIntoFuture = 0; iTurnsIntoFuture < 3; iTurnsIntoFuture++)
+        for (int iTurnsIntoFuture = 0; iTurnsIntoFuture < 3; iTurnsIntoFuture++)
+        {
+            foreach (ColorsEnum color in g.NextThree)
             {
-                foreach (ColorsEnum color in g.NextThree)
+                Dictionary<PlacedPiece, List<List<PieceEvent>>> everyOption = new Dictionary<PlacedPiece, List<List<PieceEvent>>>();
+                // HEY, IT'S JUST NOT OK TO REMEMBER WHICH PIECE CAUSED THE EVENTS.
+                // well, it is ok. it's just not critical.
+
+                // for each piece of this color, what can it cause?
+                foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
                 {
-                    Dictionary<PlacedPiece, List<List<PieceEvent>>> everyOption = new Dictionary<PlacedPiece, List<List<PieceEvent>>>();
-                    // HEY, IT'S JUST NOT OK TO REMEMBER WHICH PIECE CAUSED THE EVENTS.
-                    // well, it is ok. it's just not critical.
+                    // so yeah each piece is a unique key to a set of possible outcomes.
+                    // even pawns who do an escape move?
+                    // yeah... uh, yeah. any pawn could be the trigger piece... what matters is the board outcome.
 
-                    // for each piece of this color, what can it cause?
-                    foreach (PlacedPiece p in b.PlacedPiecesThisColor(color))
-                    {
-                        // so yeah each piece is a unique key to a set of possible outcomes.
-                        // even pawns who do an escape move?
-                        // yeah... uh, yeah. any pawn could be the trigger piece... what matters is the board outcome.
-
-                        List<List<PieceEvent>> myoptions = b.WhatCanIDo(p);
-                        FlashSpots(b, p, myoptions);
-                        // This will need to be one tree, because we're saying throw out the intermediate steps?
-                        // re-create them all, i mean???
-                        // each time? like this? 
-                        // this is going to be slow, might be painfully slow.
-                        // But we can probably think of it this way first.
-                        List<int> myGuaranteedMins = MyGuaranteedMins(b, color, myoptions);
-                        List<int> nextPlayersPotentialMaxes = NextPlayersPotentialMaxes(b, g.After(color), myoptions);
-                        List<int> thirdPlayersPotentialMaxes = ThirdPlayersPotentialMaxes(b, g.After(g.After(color)), myoptions);
-                        Debug.Assert(myoptions.Count() == myGuaranteedMins.Count() == nextPlayersPotentialMaxes.Count() == thirdPlayersPotentialMaxes.Count());
-                        everyOption.Add(p, myoptions, myGuaranteedMins, nextPlayersPotentialMaxes, thirdPlayersPotentialMaxes);
-                    }
-
-                    // My team's options, analyzed
-                    Dictionary<PlacedPiece, List<PieceEvent>> myMoveOptions = new Dictionary<PlacedPiece, List<PieceEvent>>();
-                    foreach (var li in everyOption)
-                    {
-                        // they key is the piece. the list for that key is 21what moves that piece can do.
-                        // so tell me if any moves cause a capture.
-                        bool fKingWin = false;
-
-                        foreach (var mov in li.Value)
-                        {
-                            // if king ends up in hole, we'll note that thanks
-                            foreach (var scan in mov)
-                            {
-                                if (scan.Regarding.PieceType == PiecesEnum.King)
-                                    if (scan.Regarding.Location.IsPortal)
-                                    {
-                                        fKingWin = true;
-                                        break;
-                                    }
-                            }
-                            // just look >= three events, cuz one would be a remove.
-                            // REMEMBER HERE WE'RE JUST TOYING WITH *ONLY* CONSIDERING CAPTURE SCENARIOS
-                            // IN DEVELOPING AN AI. SOUNDS DOOMED. AND PIECE-UNMOVED OR PIECE-PORTALLED 
-                            // MAKE THIS RESTRICTION MY MOVE COUNT DOOMED.
-                            // don't we track every potential move?
-                            // yes... BUT... i want to try this...
-                            // i want a limited set of events to consider.
-
-                            //                        if (mov.Count >= 3 || fKingWin)
-                            // just fucking do this for every scenario,
-                            {
-                                string extraSnippet = "";
-                                // what do we remove?
-                                foreach (var who in mov)
-                                {
-                                    // if it's on 0,0, give that piece a note.
-                                    if (fKingWin)
-                                        extraSnippet = "King goes down portal for win.";
-                                    else
-                                        if (who.Regarding.Location.IsPortal)
-                                        extraSnippet = string.Format(", and gain a {0} at the portal, ", li.Key.PieceType.ToString());
-
-                                    // Other than popups in the portal, 
-                                    if (who.Regarding.PieceType == li.Key.PieceType)
-                                        if (who.Regarding.Color == li.Key.Color)
-                                            continue;
-
-                                    // ok it's a capture. let's associate this move with the capture
-                                    Console.Write("{0} could take {1}", li.Key.Color.ToString() + li.Key.PieceType.ToString(), who.Regarding.Color.ToString() + who.Regarding.PieceType.ToString());
-                                    myMoveOptions.Add(li.Key, mov);
-                                }
-                                Console.WriteLine(extraSnippet);
-                            }
-                        }
-                    }
-
-                    // I calculated all the options my pieces have.
-                    // now FOR EACH OPTION, i ask what the next player COULD do.
-                    // and i determine (a) the minimum GUARANTEED gain for me and (b) maximum POSSIBLE gain for the other playerS
-                    // so this set of myMoveOptions... would contain two or four numbers (a & b for my two opponents)
-                    // isn't there just ONE (a) and 2 (b)'s?
+                    List<List<PieceEvent>> myoptions = b.WhatCanIDo(p);
+                    FlashSpots(b, p, myoptions);
+                    // This will need to be one tree, because we're saying throw out the intermediate steps?
+                    // re-create them all, i mean???
+                    // each time? like this? 
+                    // this is going to be slow, might be painfully slow.
+                    // But we can probably think of it this way first.
+                    List<int> myGuaranteedMins = MyGuaranteedMins(b, color, myoptions);
+                    List<int> nextPlayersPotentialMaxes = NextPlayersPotentialMaxes(b, g.After(color), myoptions);
+                    List<int> thirdPlayersPotentialMaxes = ThirdPlayersPotentialMaxes(b, g.After(g.After(color)), myoptions);
+                    Debug.Assert(myoptions.Count() == myGuaranteedMins.Count() == nextPlayersPotentialMaxes.Count() == thirdPlayersPotentialMaxes.Count());
+                    everyOption.Add(p, myoptions, myGuaranteedMins, nextPlayersPotentialMaxes, thirdPlayersPotentialMaxes);
                 }
 
-                ShowBoard(b);
+                // My team's options, analyzed
+                Dictionary<PlacedPiece, List<PieceEvent>> myMoveOptions = new Dictionary<PlacedPiece, List<PieceEvent>>();
+                foreach (var li in everyOption)
+                {
+                    // they key is the piece. the list for that key is 21what moves that piece can do.
+                    // so tell me if any moves cause a capture.
+                    bool fKingWin = false;
+
+                    foreach (var mov in li.Value)
+                    {
+                        // if king ends up in hole, we'll note that thanks
+                        foreach (var scan in mov)
+                        {
+                            if (scan.Regarding.PieceType == PiecesEnum.King)
+                                if (scan.Regarding.Location.IsPortal)
+                                {
+                                    fKingWin = true;
+                                    break;
+                                }
+                        }
+                        // just look >= three events, cuz one would be a remove.
+                        // REMEMBER HERE WE'RE JUST TOYING WITH *ONLY* CONSIDERING CAPTURE SCENARIOS
+                        // IN DEVELOPING AN AI. SOUNDS DOOMED. AND PIECE-UNMOVED OR PIECE-PORTALLED 
+                        // MAKE THIS RESTRICTION MY MOVE COUNT DOOMED.
+                        // don't we track every potential move?
+                        // yes... BUT... i want to try this...
+                        // i want a limited set of events to consider.
+
+                        //                        if (mov.Count >= 3 || fKingWin)
+                        // just fucking do this for every scenario,
+                        {
+                            string extraSnippet = "";
+                            // what do we remove?
+                            foreach (var who in mov)
+                            {
+                                // if it's on 0,0, give that piece a note.
+                                if (fKingWin)
+                                    extraSnippet = "King goes down portal for win.";
+                                else
+                                    if (who.Regarding.Location.IsPortal)
+                                    extraSnippet = string.Format(", and gain a {0} at the portal, ", li.Key.PieceType.ToString());
+
+                                // Other than popups in the portal, 
+                                if (who.Regarding.PieceType == li.Key.PieceType)
+                                    if (who.Regarding.Color == li.Key.Color)
+                                        continue;
+
+                                // ok it's a capture. let's associate this move with the capture
+                                Console.Write("{0} could take {1}", li.Key.Color.ToString() + li.Key.PieceType.ToString(), who.Regarding.Color.ToString() + who.Regarding.PieceType.ToString());
+                                myMoveOptions.Add(li.Key, mov);
+                            }
+                            Console.WriteLine(extraSnippet);
+                        }
+                    }
+                }
+
+                // I calculated all the options my pieces have.
+                // now FOR EACH OPTION, i ask what the next player COULD do.
+                // and i determine (a) the minimum GUARANTEED gain for me and (b) maximum POSSIBLE gain for the other playerS
+                // so this set of myMoveOptions... would contain two or four numbers (a & b for my two opponents)
+                // isn't there just ONE (a) and 2 (b)'s?
             }
 
-            // starting with white for some reason, we've thought 3 moves ahead?!
-
-            // Can I attack into the center, with both my own piece and the center piece falling?
-            // Can I attack a piece and cause a regeneration of my own piece based on this event?
-
-            // Put a king and a queen side-by-side, and see diddily-doos.
-
-            // Pawns can step out of a group, the mob it's called
-            // make a mob and watch it generate many (96?) breakout positions.
-            // That would affirm Stephan's research.
-
-    */
+            ShowBoard(b);
         }
-    }
+
+        // starting with white for some reason, we've thought 3 moves ahead?!
+
+        // Can I attack into the center, with both my own piece and the center piece falling?
+        // Can I attack a piece and cause a regeneration of my own piece based on this event?
+
+        // Put a king and a queen side-by-side, and see diddily-doos.
+
+        // Pawns can step out of a group, the mob it's called
+        // make a mob and watch it generate many (96?) breakout positions.
+        // That would affirm Stephan's research.
+
+*/
+        }
+}
 }
