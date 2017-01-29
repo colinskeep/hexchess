@@ -642,10 +642,47 @@ namespace HexC
             return events;
         }
 
+        // A Diddily Doo flips queen-king if possible, and determines what the piece can cause in both scenarios.
+        // which might just be a swapped queen-king.
+
+        public List<List<PieceEvent>> WhatCanICauseWithDoo(PlacedPiece p)
+        {
+            // First gather events with no diddily-doo.
+            List<List<PieceEvent>> allPotentialOutcomes = WhatCanICause(p);
+
+            // Now see if there's also a sequence of events after diddily-doo
+            // Is the Queen next to the king?
+            PlacedPiece king = FindPiece(PiecesEnum.King, p.Color);
+            PlacedPiece queen = FindPiece(PiecesEnum.Queen, p.Color);
+            if(null != queen)
+            { 
+                // shit there are some rules about moving into check. just be super-simple and we'll figure it out later.
+                BoardLocationList queenCouldBe = KingStatic.CouldGoIfOmnipotent(king.Location);
+                if(queenCouldBe.ContainsTheLocation(queen.Location))
+                {
+                    // swap those two pieces on theoretical game board 
+                    Board bAfterDooSwap = new Board(this);
+                    bAfterDooSwap.Remove(queen);
+                    bAfterDooSwap.Remove(king);
+                    bAfterDooSwap.Add(new PlacedPiece(PiecesEnum.King, queen.Color, queen.Location.Q, queen.Location.R));
+                    bAfterDooSwap.Add(new PlacedPiece(PiecesEnum.Queen, king.Color, king.Location.Q, king.Location.R));
+
+                    // DID I JUST PUT MYSELF INTO CHECK? CUZ I'M PRETTY SURE THAT'S PROHIBITED.
+                    //                    Debug.Assert(false == bTheoretical.InCheck(pNewKing.Color)); // off for now
+
+                    List<List<PieceEvent>> evenMorePotentialOutcomes = WhatCanICause(p);
+                    // for each outcome, create two events that swap king-queen (two removals, two adds)
+                    Debug.Assert(false);
+                    // combine with allPotentialOutcomes.
+                }
+            }
+            return allPotentialOutcomes;
+        }
+
         // Front door for asking "hey, what outcomes can I produce if it's my turn to move now?"
         // Result is a list of a list of changes, one list per scenario.
 
-        public List<List<PieceEvent>> WhatCanICause(PlacedPiece p, bool fdiddilydooit = true)
+        protected List<List<PieceEvent>> WhatCanICause(PlacedPiece p) // , bool fdiddilydooit = true)
         {
             List<List<PieceEvent>> allPotentialOutcomes = new List<List<PieceEvent>>();
 
@@ -665,29 +702,6 @@ namespace HexC
 
                 case PiecesEnum.King:
                     {
-                        if (true == fdiddilydooit) // Is this a "no diddily doo" iteration?
-                        {
-                            // Is the Queen next to the king?
-                            PlacedPiece queen = FindPiece(PiecesEnum.Queen, p.Color);
-                            if (null != queen)
-                            {
-                                // Is there a queen of my color on any spot I can reach?
-                                BoardLocationList queenCouldBe = KingStatic.CouldGoIfOmnipotent(p.Location);
-                                if (queenCouldBe.ContainsTheLocation(queen.Location))
-                                {
-                                    // swap those two pieces on theoretical game board 
-                                    Board bTheoretical = new Board(this);
-                                    PlacedPiece pNewKing = new PlacedPiece(p, queen.Location);
-                                    bTheoretical.Add(pNewKing);
-                                    bTheoretical.Add(new PlacedPiece(queen, p.Location));
-
-                                    // DID I JUST PUT MYSELF INTO CHECK? CUZ I'M PRETTY SURE THAT'S PROHIBITED.
-                                    Debug.Assert(false == bTheoretical.InCheck(pNewKing.Color));
-
-                                    allPotentialOutcomes = bTheoretical.WhatCanICause(pNewKing, false); // interate, just once
-                                }
-                            }
-                        }
                         BoardLocationList spots = WhereCanIReach(p);
                         // did i just land on some unfortunate piece? cuz those are events.
                         foreach (BoardLocation spot in spots)
@@ -892,7 +906,7 @@ namespace HexC
 
             ShowBoard(b);
 
-            List<List<PieceEvent>> options = b.WhatCanICause(ppq);
+            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
             
             ShowBoard(b);
             FlashSpots(b, ppq, options);
