@@ -470,19 +470,6 @@ namespace HexC
                         return spots;
                     }
 
-                /*                case PiecesEnum.Queen:
-                                    {
-                                        // #1 : pretend i'm a castle, cuz i have all those moves!
-                                        //    a. shove a castle where the queen is???
-                                        // and what about the diddily doo?????
-                                        BoardLocationList queenDests = WhereCanIReach()
-                                        // #2 : My triple jumps need routes+
-                                        //BoardLocationList spots = QueenStatic.CouldGoIfOmnipotent(p.Location);
-                                        Debug.Assert(false);
-                                        return null;
-                                    }
-                                    */
-
                 case PiecesEnum.Queen: // a queen is a castle plus other magic!
                 case PiecesEnum.Castle:
                     {
@@ -510,7 +497,7 @@ namespace HexC
                                     continue;
                                 }
                                 if (pThere.Color == p.Color)
-                                    break; // yes! so i can't move here, and run is OVER.
+                                    break; // same-color piece, so i can't move here, and run is OVER.
 
                                 options.Add(pThere.Location);
                                 break; // run is over!
@@ -534,9 +521,6 @@ namespace HexC
                             options.Add(b);
 
                         return options;
-
-//                        Program.ShowBoard(this);
-//                        Program.FlashSpots(this, p, m_QueenDesties);
                     }
 
                 default:
@@ -661,7 +645,7 @@ namespace HexC
         // Front door for asking "hey, what outcomes can I produce if it's my turn to move now?"
         // Result is a list of a list of changes, one list per scenario.
 
-        public List<List<PieceEvent>> WhatCanIDo(PlacedPiece p, bool fdiddilydooit = true)
+        public List<List<PieceEvent>> WhatCanICause(PlacedPiece p, bool fdiddilydooit = true)
         {
             List<List<PieceEvent>> allPotentialOutcomes = new List<List<PieceEvent>>();
 
@@ -700,7 +684,7 @@ namespace HexC
                                     // DID I JUST PUT MYSELF INTO CHECK? CUZ I'M PRETTY SURE THAT'S PROHIBITED.
                                     Debug.Assert(false == bTheoretical.InCheck(pNewKing.Color));
 
-                                    allPotentialOutcomes = bTheoretical.WhatCanIDo(pNewKing, false); // interate, just once
+                                    allPotentialOutcomes = bTheoretical.WhatCanICause(pNewKing, false); // interate, just once
                                 }
                             }
                         }
@@ -881,9 +865,9 @@ namespace HexC
             
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -1, -4));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -4, -1));
-//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
 //            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
-//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
             PlacedPiece ppq = new PlacedPiece(PiecesEnum.Queen, ColorsEnum.Black, -3, -2);
             b.Add(ppq);
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -2, -3));
@@ -904,11 +888,11 @@ namespace HexC
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -2));
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -1));
             b.Add(new Piece(PiecesEnum.Castle, ColorsEnum.White)); // I have a castle on the sidelines.
-                                                                   //            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
+//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
 
             ShowBoard(b);
 
-            List<List<PieceEvent>> options = b.WhatCanIDo(ppq);
+            List<List<PieceEvent>> options = b.WhatCanICause(ppq);
             
             ShowBoard(b);
             FlashSpots(b, ppq, options);
