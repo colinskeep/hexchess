@@ -664,16 +664,31 @@ namespace HexC
                     Board bAfterDooSwap = new Board(this);
                     bAfterDooSwap.Remove(queen);
                     bAfterDooSwap.Remove(king);
-                    bAfterDooSwap.Add(new PlacedPiece(PiecesEnum.King, queen.Color, queen.Location.Q, queen.Location.R));
-                    bAfterDooSwap.Add(new PlacedPiece(PiecesEnum.Queen, king.Color, king.Location.Q, king.Location.R));
+                    var newKing = new PlacedPiece(PiecesEnum.King, queen.Color, queen.Location.Q, queen.Location.R);
+                    var newQueen = new PlacedPiece(PiecesEnum.Queen, king.Color, king.Location.Q, king.Location.R);
+                    bAfterDooSwap.Add(newKing);
+                    bAfterDooSwap.Add(newQueen);
 
-                    // DID I JUST PUT MYSELF INTO CHECK? CUZ I'M PRETTY SURE THAT'S PROHIBITED.
-                    //                    Debug.Assert(false == bTheoretical.InCheck(pNewKing.Color)); // off for now
+                    // We can (hey, probably) swap king-queen.
+                    // but if this inquiry is about one of them, then we're inquiring about a piece in a different spot.
+                    if (p.PieceType == PiecesEnum.King)
+                        p = newKing;
+                    if (p.PieceType == PiecesEnum.Queen)
+                        p = newQueen;
 
-                    List<List<PieceEvent>> evenMorePotentialOutcomes = WhatCanICause(p);
-                    // for each outcome, create two events that swap king-queen (two removals, two adds)
-                    Debug.Assert(false);
-                    // combine with allPotentialOutcomes.
+                    List<List<PieceEvent>> evenMorePotentialOutcomes = bAfterDooSwap.WhatCanICause(p);
+
+                    // each event set has one additional set, a swapparoo
+                    // though i bet i'm going to be missing check cases and crying here.
+                    foreach(var set in evenMorePotentialOutcomes)
+                    {
+                        set.Add(new PieceEvent(queen, EventTypeEnum.Remove));
+                        set.Add(new PieceEvent(king, EventTypeEnum.Remove));
+                        set.Add(new PieceEvent(newQueen, EventTypeEnum.Add));
+                        set.Add(new PieceEvent(newKing, EventTypeEnum.Add));
+                        allPotentialOutcomes.Add(set);
+                    }
+                    evenMorePotentialOutcomes = null;
                 }
             }
             return allPotentialOutcomes;
