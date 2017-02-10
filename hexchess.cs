@@ -14,6 +14,18 @@ namespace HexC
     // let's change them to pointy-topped! (geez, i hope i did this.)
     // http://www.redblobgames.com/grids/hexagons/
 
+
+    class PawnStatic : PieceStatic
+    {
+        public static BoardLocationList CouldGoIfOmnipotent(BoardLocation fromHere) // SAME AS KING
+        {
+            int[,] JumpOptions = {
+                { 0, -1 }, { 1, -1 }, {1, 0 }, {0,1 }, {-1, 1 }, {-1,0 } 
+            };
+            return CookUpLocations(fromHere, JumpOptions);
+        }
+    }
+
     class KingStatic : PieceStatic
     {
         public static BoardLocationList CouldGoIfOmnipotent(BoardLocation fromHere)
@@ -348,15 +360,16 @@ namespace HexC
             return realOptions;
         }
 
-        BoardLocationList YankSpotsOfThisColor(BoardLocationList options, ColorsEnum c)
+        BoardLocationList YankSpotsOccupiedByThisColor(BoardLocationList options, ColorsEnum? c) // can be NULL for ANY color
         {
             BoardLocationList realOptions = new BoardLocationList();
 
             foreach (BoardLocation b in options)
             {
                 PlacedPiece p = AnyoneThere(b);
-                if (null != p)
-                    if (p.Color == c)
+                if (null != p)          // there's a piece
+                    if((c == null) ||   // there's a piece and i yank pieces of any color
+                        (p.Color != c)) // there's a piece of a color other than the one specified
                         continue;
 
                 realOptions.Add(b);
@@ -386,7 +399,7 @@ namespace HexC
             foreach (BoardLocation bl in options)
             {
                 // Make a hypothetical board
-                Board bHypothetical = new Board(this);     // clone meeeee
+                Board bHypothetical = new Board(this);       // clone meeeee
                 bHypothetical.Remove(p);                     // take me off.
                 bHypothetical.Add(new PlacedPiece(p, bl));   // put me on at the destination
 
@@ -451,7 +464,7 @@ namespace HexC
                     {
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
-                        options = YankSpotsOfThisColor(options, p.Color);
+                        options = YankSpotsOccupiedByThisColor(options, p.Color);
                         if (fShallowCheck)
                             options = YankSpotsThatPutMeInCheck(options, p);
                         return options;
@@ -464,10 +477,32 @@ namespace HexC
                         // RE-RUN elsewhere.
                         BoardLocationList spots = KingStatic.CouldGoIfOmnipotent(p.Location);
                         spots = YankSpotsThatArentBoardSpots(spots, true); // true for the king!
-                        spots = YankSpotsOfThisColor(spots, p.Color); // diddily doo is not handled here!
+                        spots = YankSpotsOccupiedByThisColor(spots, p.Color); // diddily doo is not handled here!
                         if (fShallowCheck)
                             spots = YankSpotsThatPutMeInCheck(spots, p);
                         return spots;
+                    }
+
+                case PiecesEnum.Pawn:
+                    {
+                        BoardLocationList stepSpots = PawnStatic.CouldGoIfOmnipotent(p.Location);
+                        stepSpots = YankSpotsThatArentBoardSpots(stepSpots);
+                        stepSpots = YankSpotsOccupiedByThisColor(stepSpots, null); // Yank spots occupied AT ALL
+
+                        BoardLocationList attackWalkSpots = PawnStatic.WalkToSameColorStarSpots(this.PlacedPieces, p.Location);
+                        attackWalkSpots = YankEmptySpots(attackWalkSpots);
+                        attackWalkSpots = YankSpotsOccupiedByThisColor(attackWalkSpots, p.Color);
+
+                        BoardLocationList allSpots = new BoardLocationList();
+                        foreach (var spot in stepSpots)
+                            allSpots.Add(spot);
+                        foreach (var spot in attackWalkSpots)
+                            allSpots.Add(spot);
+
+                        if (fShallowCheck)
+                            allSpots = YankSpotsThatPutMeInCheck(allSpots, p);
+
+                        return allSpots;
                     }
 
                 case PiecesEnum.Queen: // a queen is a castle plus other magic!
@@ -756,11 +791,26 @@ namespace HexC
                     }
 
                 case PiecesEnum.Pawn:
-                    // can croass the board and xform!
-                    // A pawn involved in a mob can trigger a second pawn move if exiting the mob
-                    // different capture pattern vs motion
-                    // also electric fence!
-                    Debug.Assert(false); break;
+                    {
+                        // 2. can croass the board and xform... into any piece?!
+                        // 3. Exiting a mob requires two pawn moves.
+                        // 4. electric fence!
+
+                        // are we a raw lone pawn? for now assume yes.
+                        BoardLocationList spots = WhereCanIReach(p); 
+
+                        // IF I REACH ACROSS THE BOARD, I TRANSFORM, DUDE.
+                        // (this requires establishment of a back/front wall for each color)
+
+                        // we want events associated with each spot
+                        foreach (BoardLocation spot in spots)
+                        {
+                            List<PieceEvent> events = EventsFromAMove(p, spot);
+                            allPotentialOutcomes.Add(events);
+                        }
+                        return allPotentialOutcomes;
+
+                    }
             }
 
             return allPotentialOutcomes;
@@ -891,16 +941,22 @@ namespace HexC
             Console.WriteLine();
 
             */
-            
+
+            /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -1, -4));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -4, -1));
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
-//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
+            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
+            */
+
             PlacedPiece ppq = new PlacedPiece(PiecesEnum.Queen, ColorsEnum.Black, -3, -2);
             b.Add(ppq);
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -2, -3));
+            PlacedPiece ppawn = new PlacedPiece(PiecesEnum.Pawn, ColorsEnum.Black, -1, -1);
+            b.Add(ppawn);
 
+            /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -1, 5));
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -3, 4));
@@ -918,13 +974,15 @@ namespace HexC
             b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -1));
             b.Add(new Piece(PiecesEnum.Castle, ColorsEnum.White)); // I have a castle on the sidelines.
 //            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
+            */
 
             ShowBoard(b);
 
-            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
-            
+            //            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
+            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppawn);
+
             ShowBoard(b);
-            FlashSpots(b, ppq, options);
+            FlashSpots(b, ppawn, options);
 
             // from here, we only know Game, not Board.
 
