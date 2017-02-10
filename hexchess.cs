@@ -360,6 +360,18 @@ namespace HexC
             return realOptions;
         }
 
+
+        BoardLocationList YankEmptySpots(BoardLocationList spots)
+        {
+            BoardLocationList nonEmptySpots = new BoardLocationList();
+            foreach( var spot in spots )
+            {
+                if (null != AnyoneThere(spot))
+                    nonEmptySpots.Add(spot);
+            }
+            return nonEmptySpots;
+        }
+
         BoardLocationList YankSpotsOccupiedByThisColor(BoardLocationList options, ColorsEnum? c) // can be NULL for ANY color
         {
             BoardLocationList realOptions = new BoardLocationList();
@@ -369,7 +381,7 @@ namespace HexC
                 PlacedPiece p = AnyoneThere(b);
                 if (null != p)          // there's a piece
                     if((c == null) ||   // there's a piece and i yank pieces of any color
-                        (p.Color != c)) // there's a piece of a color other than the one specified
+                        (p.Color == c)) // there's a piece of a color same as specified
                         continue;
 
                 realOptions.Add(b);
@@ -489,7 +501,7 @@ namespace HexC
                         stepSpots = YankSpotsThatArentBoardSpots(stepSpots);
                         stepSpots = YankSpotsOccupiedByThisColor(stepSpots, null); // Yank spots occupied AT ALL
 
-                        BoardLocationList attackWalkSpots = PawnStatic.WalkToSameColorStarSpots(this.PlacedPieces, p.Location);
+                        BoardLocationList attackWalkSpots = WalksToStarSpots(p.Location, false ); 
                         attackWalkSpots = YankEmptySpots(attackWalkSpots);
                         attackWalkSpots = YankSpotsOccupiedByThisColor(attackWalkSpots, p.Color);
 
@@ -565,7 +577,7 @@ namespace HexC
         }
 
 
-        BoardLocationList WhereCanQueenWalk(BoardLocation fromHere)
+        BoardLocationList WalksToStarSpots(BoardLocation fromHere, bool fSpotMustBeEmpty)
         {
             BoardLocationList destys = new BoardLocationList();
 
@@ -577,7 +589,7 @@ namespace HexC
             {
                 BoardLocation to = new BoardLocation(fromHere.Q + WalkOptions[iSet, 0], fromHere.R + WalkOptions[iSet, 1]);
                 if (true == to.IsValidLocation())
-                    if (null == this.AnyoneThere(to))
+                    if ((false == fSpotMustBeEmpty) || (null == this.AnyoneThere(to)))
                     {
                         PlacedPiece one = this.AnyoneThere(new BoardLocation(fromHere.Q + RouteOne[iSet, 0], fromHere.R + RouteOne[iSet, 1]));
                         PlacedPiece two = this.AnyoneThere(new BoardLocation(fromHere.Q + RouteTwo[iSet, 0], fromHere.R + RouteTwo[iSet, 1]));
@@ -617,7 +629,7 @@ namespace HexC
                 return;
             }
 
-            foreach (var spot in WhereCanQueenWalk(pathSoFar[pathSoFar.Count - 1]))
+            foreach (var spot in WalksToStarSpots(pathSoFar[pathSoFar.Count - 1], true)) // landing spot must be empty
             {
                 pathSoFar.Add(spot);
                 WalkToSameColorStarSpots(level, pathSoFar);
@@ -800,7 +812,7 @@ namespace HexC
                         BoardLocationList spots = WhereCanIReach(p); 
 
                         // IF I REACH ACROSS THE BOARD, I TRANSFORM, DUDE.
-                        // (this requires establishment of a back/front wall for each color)
+                        // (this requires establishment of a back/front wall for each color)r
 
                         // we want events associated with each spot
                         foreach (BoardLocation spot in spots)
@@ -955,6 +967,7 @@ namespace HexC
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Black, -2, -3));
             PlacedPiece ppawn = new PlacedPiece(PiecesEnum.Pawn, ColorsEnum.Black, -1, -1);
             b.Add(ppawn);
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -2, 1));
 
             /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
