@@ -899,7 +899,7 @@ namespace HexC
                     if (null == p)
                     {
                         Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write(". ");
+                        Console.Write(spot.IsPortal ? "X " : "· ");
                     }
                     else
                     {
