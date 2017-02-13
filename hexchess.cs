@@ -1062,7 +1062,7 @@ namespace HexC
             ShowBoard(b);
             FlashSpots(b, ppawn, options);
 
-            ShowTextBoard(b);
+//            ShowTextBoard(b);
 
             // from here, we only know Game, not Board.
 
