@@ -925,7 +925,9 @@ namespace HexC
 
         public static void ShowBoard(Board b)
         {
-             Form1.ShowBoard(b.PlacedPieces, b.HighlightedSpots);
+#if _WINDOWS
+            Form1.ShowBoard(b.PlacedPieces, b.HighlightedSpots);
+#endif
         }
 
         public static void FlashSpots(Board b, PlacedPiece p, List<List<PieceEvent>> options)
@@ -954,7 +956,11 @@ namespace HexC
 
         static void Main(string[] args)
         {
+#if _WINDOWS
             Form1.StartMeUp();
+#else
+            HCMain() ;
+#endif
         }
 
         public static void HCMain()
