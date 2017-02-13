@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace HexC
 {
-    public enum PiecesEnum { Pawn, Knight, Castle, Queen, King }
+    public enum PiecesEnum { Pawn, Elephant, Castle, Queen, King }
     public enum ColorsEnum { White, Tan, Black }
 
     // these numbers are the axial coordinate system on a flat-topped hex board.
@@ -473,7 +473,7 @@ namespace HexC
         {
             switch (p.PieceType)
             {
-                case PiecesEnum.Knight:
+                case PiecesEnum.Elephant:
                     {
                         BoardLocationList options = KnightStatic.CouldGoIfOmnipotent(p.Location);
                         options = YankSpotsThatArentBoardSpots(options);
@@ -751,7 +751,7 @@ namespace HexC
 
             switch (p.PieceType)
             {
-                case PiecesEnum.Knight: // no special moves, no pathfinding. easiest!
+                case PiecesEnum.Elephant: // no special moves, no pathfinding. easiest!
                     {
                         BoardLocationList spots = WhereCanIReach(p);
                         // we want events associated with each spot
@@ -898,12 +898,23 @@ namespace HexC
                     PlacedPiece p = b.AnyoneThere(spot);
                     if (null == p)
                     {
-                        Console.Write("\\[\\033[1;30m\\]");
+                        Console.ForegroundColor = ConsoleColor.Gray;
                         Console.Write(". ");
                     }
                     else
                     {
-                        Console.Write("\\[\\033[1;36m\\]");
+                        switch(p.Color)
+                        {
+                            case ColorsEnum.Black:
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                break;
+                            case ColorsEnum.White:
+                                Console.ForegroundColor = ConsoleColor.White;
+                                break;
+                            case ColorsEnum.Tan:
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                break;
+                        }
                         Console.Write(p.ToChar() + " ");
                     }
                 }
@@ -1002,13 +1013,11 @@ namespace HexC
 
             */
 
-            /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -1, -4));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Black, -4, -1));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -1, -3));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -2, -2));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Black, -3, -1));
-            */
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Black, -1, -3));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Black, -2, -2));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Black, -3, -1));
 
             PlacedPiece ppq = new PlacedPiece(PiecesEnum.Queen, ColorsEnum.Black, -3, -2);
             b.Add(ppq);
@@ -1018,25 +1027,23 @@ namespace HexC
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -2, 1));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, 0, -2));
 
-            /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -1, 5));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -3, 4));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -2, 4));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.Tan, -1, 4));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Tan, -3, 4));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Tan, -2, 4));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.Tan, -1, 4));
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.Tan, -3, 5));
 
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.White, 5, -4)); // reincarnate
             b.Add(new PlacedPiece(PiecesEnum.King, ColorsEnum.White, 1, 0)); // victory tester!
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2, 1)); // test can knight jump into 0,0
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 2, 1)); // test can knight jump into 0,0
 //            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.White, 5, 0)); // testing the hole
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.White, 5, -1));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -3));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -2));
-            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 4, -1));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 4, -3));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 4, -2));
+            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 4, -1));
             b.Add(new Piece(PiecesEnum.Castle, ColorsEnum.White)); // I have a castle on the sidelines.
-//            b.Add(new PlacedPiece(PiecesEnum.Knight, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
-            */
+//            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
 
             ShowBoard(b);
 
