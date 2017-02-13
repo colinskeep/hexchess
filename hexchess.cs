@@ -168,6 +168,7 @@ namespace HexC
 
         public PiecesEnum PieceType { get { return this.pieceType; } }
         public ColorsEnum Color { get { return this.pieceColor; } }
+        public char ToChar() { return PieceType.ToString()[0]; }
     }
 
     public class PieceList : List<Piece>
@@ -330,7 +331,7 @@ namespace HexC
             highlightedSpots.Add(loc);
         }
 
-        PlacedPiece AnyoneThere(BoardLocation b)
+        public PlacedPiece AnyoneThere(BoardLocation b)
         {
             foreach (PlacedPiece pp in placedPieces)
             {
@@ -583,7 +584,7 @@ namespace HexC
 
             int[,] WalkOptions = { { 1, -2 }, { 2, -1 }, { 1, 1 }, { -1, 2 }, { -2, 1 }, { -1, -1 } };
             int[,] RouteOne    = { { 0, -1 }, { 1, -1 }, { 1, 0 }, {  0, 1 }, { -1, 1 }, { -1,  0 } };
-            int[,] RouteTwo    = { { 1, -1 }, { 1, 0 }, { 0, 1 },  { -1, 1 }, { -1, 0 }, {  0, -1 } };
+            int[,] RouteTwo    = { { 1, -1 }, { 1,  0 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, {  0, -1 } };
 
             for (int iSet = 0; iSet < WalkOptions.GetLength(0); iSet++)
             {
@@ -864,6 +865,53 @@ namespace HexC
 
     class Program
     {
+
+        public static void ShowTextBoard(Board b)
+        {
+            // Spit sequentially
+            // the lines grow, then shrink
+            // 6, then 7, then 8, then 9, up to 11, then back down.
+            // FIRST:  how many in this line.
+            // SECOND: first of the two coordinates, that increment across the line.
+            // THIRD:  the other coordinate, that does not change across this line.
+            int [,] Lines = { { 6,  0, -5 },
+                              { 7, -1, -4 },
+                              { 8, -2, -3 },
+                              { 9, -3, -2 },
+                              {10, -4, -1 },
+                              {11, -5,  0 },
+                              {10, -5,  1 },
+                              { 9, -5,  2 },
+                              { 8, -5,  3 },
+                              { 7, -5,  4 },
+                              { 6, -5,  5 } };
+
+            for (int iLine = 0; iLine < Lines.GetLength(0); iLine++)
+            {
+                // First ident this many spaces: 11 minus how-many-this-line
+                Console.Write("             ".Substring(0, 11 - Lines[iLine, 0]));
+
+                // now increment through the line
+                for (int iPos = 0; iPos < Lines[iLine, 0]; iPos++)
+                {
+                    BoardLocation spot = new BoardLocation(Lines[iLine, 1]+iPos, Lines[iLine,2]);
+                    PlacedPiece p = b.AnyoneThere(spot);
+                    if (null == p)
+                    {
+                        Console.Write("\\[\\033[1;30m\\]");
+                        Console.Write(". ");
+                    }
+                    else
+                    {
+                        Console.Write("\\[\\033[1;36m\\]");
+                        Console.Write(p.ToChar() + " ");
+                    }
+                }
+                Console.WriteLine();
+            }
+
+        }
+
         public static void ShowBoard(Board b)
         {
              Form1.ShowBoard(b.PlacedPieces, b.HighlightedSpots);
@@ -968,6 +1016,7 @@ namespace HexC
             PlacedPiece ppawn = new PlacedPiece(PiecesEnum.Pawn, ColorsEnum.Black, -1, -1);
             b.Add(ppawn);
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -2, 1));
+            b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, 0, -2));
 
             /*
             b.Add(new PlacedPiece(PiecesEnum.Castle, ColorsEnum.Tan, -4, 5));
@@ -991,11 +1040,16 @@ namespace HexC
 
             ShowBoard(b);
 
+            ShowTextBoard(b);
+
+
             //            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
             List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppawn);
 
             ShowBoard(b);
             FlashSpots(b, ppawn, options);
+
+            ShowTextBoard(b);
 
             // from here, we only know Game, not Board.
 
