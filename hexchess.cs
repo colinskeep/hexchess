@@ -866,7 +866,7 @@ namespace HexC
     class Program
     {
 
-        public static void ShowTextBoard(Board b)
+        public static void ShowTextBoard(Board b, BoardLocation singleSpot = null,  BoardLocationList highlights = null)
         {
             // Spit sequentially
             // the lines grow, then shrink
@@ -895,11 +895,30 @@ namespace HexC
                 for (int iPos = 0; iPos < Lines[iLine, 0]; iPos++)
                 {
                     BoardLocation spot = new BoardLocation(Lines[iLine, 1]+iPos, Lines[iLine,2]);
+
+                    Console.BackgroundColor = ConsoleColor.Black;
+
+                    if(highlights != null)
+                    {
+                        if(highlights.ContainsTheLocation(spot))
+                        {
+                            Console.BackgroundColor = ConsoleColor.DarkGray;
+                        }
+                    }
+
+                    if (singleSpot != null)
+                    {
+                        if (BoardLocation.IsSameLocation(singleSpot, spot))
+                            Console.BackgroundColor = ConsoleColor.DarkRed;
+                    }
+
                     PlacedPiece p = b.AnyoneThere(spot);
                     if (null == p)
                     {
                         Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write(spot.IsPortal ? "X " : "· ");
+                        Console.Write(spot.IsPortal ? "X" : "·");
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.Write(" ");
                     }
                     else
                     {
@@ -915,7 +934,9 @@ namespace HexC
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 break;
                         }
-                        Console.Write(p.ToChar() + " ");
+                        Console.Write(p.ToChar());
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.Write(" ");
                     }
                 }
                 Console.WriteLine();
@@ -928,6 +949,26 @@ namespace HexC
 #if _WINDOWS
             Form1.ShowBoard(b.PlacedPieces, b.HighlightedSpots);
 #endif
+        }
+
+        // given a piece and a set of options, return a list of spots i'd like to highlight.
+        public static BoardLocationList SpotsPieceCanImpact(Board b, PlacedPiece p, List<List<PieceEvent>> options)
+        {
+            BoardLocationList locs = new BoardLocationList();
+
+            foreach (var changes in options)
+            {
+                foreach (var change in changes)
+                {
+                    if (change.Type == EventTypeEnum.Add)
+                    {
+                        if (false == locs.ContainsTheLocation(change.Regarding.Location))
+                            locs.Add(change.Regarding.Location);
+                    }
+                }
+            }
+
+            return locs;
         }
 
         public static void FlashSpots(Board b, PlacedPiece p, List<List<PieceEvent>> options)
@@ -1053,11 +1094,13 @@ namespace HexC
 
             ShowBoard(b);
 
-            ShowTextBoard(b);
-
-
             //            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
             List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppawn);
+
+            BoardLocationList locs = SpotsPieceCanImpact(b, ppawn, options);
+            ShowTextBoard(b, ppawn.Location, locs);
+
+
 
             ShowBoard(b);
             FlashSpots(b, ppawn, options);
