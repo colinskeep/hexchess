@@ -1105,7 +1105,7 @@ namespace HexC
 
             {
                 // Give me a way to step through pieces and their options, and choose one!
-
+MOVE_ALONG:
                 List<PlacedPiece> myPieces = b.PlacedPieces;
                 int slot = 0;
                 while (true)
@@ -1113,8 +1113,9 @@ namespace HexC
                     PlacedPiece thePiece = myPieces[slot];
                     List<List<PieceEvent>> pieceOptions = b.WhatCanICauseWithDoo(thePiece);
                     BoardLocationList locs = SpotsWhereAddsOccur(b, pieceOptions);
+                    Console.Clear();
                     ShowTextBoard(b, thePiece.Location, locs);
-                    ConsoleKeyInfo cki = Console.ReadKey();
+                    ConsoleKeyInfo cki = Console.ReadKey(); Console.WriteLine();
                     switch (cki.KeyChar)
                     {
                         case 'q': // left step through my pieces
@@ -1126,6 +1127,44 @@ namespace HexC
                             if (++slot >= myPieces.Count())
                                 slot = 0;
                             break;
+
+                        case 'm': // move to one of those destinations
+                                  // well, what's easiest?
+                                  // easiest is just drop it there,
+                                  // removing anyone already there.
+
+                            // iterate through the destinations
+                            int loc = 0;
+                            while (true)
+                            {
+                                BoardLocationList oneLoc = new BoardLocationList();
+                                oneLoc.Add(locs[loc]);
+                                Console.Clear();
+                                ShowTextBoard(b, thePiece.Location, oneLoc);
+                                ConsoleKeyInfo destKey = Console.ReadKey(); Console.WriteLine();
+                                switch (destKey.KeyChar)
+                                {
+                                    case 'q':
+                                        if (--loc < 0)
+                                            loc = locs.Count() - 1;
+                                        break;
+
+                                    case 'w':
+                                        if (++loc >= locs.Count())
+                                            loc = 0;
+                                        break;
+
+                                    case 'm': // if we move to this spot, just empty that spot and shove this there.
+                                        BoardLocation bl = locs[loc];
+                                        PlacedPiece p = b.AnyoneThere(bl);
+                                        if (null != p)
+                                            b.Remove(p);
+                                        b.Remove(thePiece);
+                                        b.Add( new PlacedPiece(thePiece,bl));
+                                        goto MOVE_ALONG;
+                                }
+                            }
+
                             /*
                         case 'a': // drill into a piece
                             int changesetslot = 0;
@@ -1136,7 +1175,7 @@ namespace HexC
                             break;
                             */
                     }
-                    Console.WriteLine();
+//                    Console.WriteLine();
                 }
             }
 
