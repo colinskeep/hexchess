@@ -253,7 +253,7 @@ namespace HexC
         List<PlacedPiece> placedPieces = new List<PlacedPiece>();
         PieceList sidelined = new PieceList();
 
-        BoardLocationList highlightedSpots = new BoardLocationList(); // purely cosmetic
+        BoardLocationList highlightedSpots = new BoardLocationList(); // purely cosmetic, only used by Windows Form
         public BoardLocationList HighlightedSpots { get { return highlightedSpots; } }
 
 
@@ -888,6 +888,7 @@ namespace HexC
 
             for (int iLine = 0; iLine < Lines.GetLength(0); iLine++)
             {
+                Console.ResetColor();
                 // First ident this many spaces: 11 minus how-many-this-line
                 Console.Write("             ".Substring(0, 11 - Lines[iLine, 0]));
 
@@ -896,13 +897,13 @@ namespace HexC
                 {
                     BoardLocation spot = new BoardLocation(Lines[iLine, 1]+iPos, Lines[iLine,2]);
 
-                    Console.BackgroundColor = ConsoleColor.Black;
+//                    Console.BackgroundColor = ConsoleColor.DarkYellow;
 
                     if(highlights != null)
                     {
                         if(highlights.ContainsTheLocation(spot))
                         {
-                            Console.BackgroundColor = ConsoleColor.DarkGray;
+                            Console.BackgroundColor = ConsoleColor.DarkYellow;
                         }
                     }
 
@@ -917,7 +918,7 @@ namespace HexC
                     {
                         Console.ForegroundColor = ConsoleColor.Gray;
                         Console.Write(spot.IsPortal ? "X" : "·");
-                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.ResetColor();
                         Console.Write(" ");
                     }
                     else
@@ -952,7 +953,7 @@ namespace HexC
         }
 
         // given a piece and a set of options, return a list of spots i'd like to highlight.
-        public static BoardLocationList SpotsPieceCanImpact(Board b, PlacedPiece p, List<List<PieceEvent>> options)
+        public static BoardLocationList SpotsWhereAddsOccur(Board b, List<List<PieceEvent>> options)
         {
             BoardLocationList locs = new BoardLocationList();
 
@@ -1092,18 +1093,54 @@ namespace HexC
             b.Add(new Piece(PiecesEnum.Castle, ColorsEnum.White)); // I have a castle on the sidelines.
 //            b.Add(new PlacedPiece(PiecesEnum.Elephant, ColorsEnum.White, 2,1)); // test can knight jump into 0,0
 
-            ShowBoard(b);
 
-            //            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppq);
-            List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppawn);
+            {
+                List<List<PieceEvent>> options = b.WhatCanICauseWithDoo(ppawn);
+                BoardLocationList locs = SpotsWhereAddsOccur(b, options);
+                ShowTextBoard(b, ppawn.Location, locs);
 
-            BoardLocationList locs = SpotsPieceCanImpact(b, ppawn, options);
-            ShowTextBoard(b, ppawn.Location, locs);
+                ShowBoard(b);
+                FlashSpots(b, ppawn, options);
+            }
+
+            {
+                // Give me a way to step through pieces and their options, and choose one!
+
+                List<PlacedPiece> myPieces = b.PlacedPieces;
+                int slot = 0;
+                while (true)
+                {
+                    PlacedPiece thePiece = myPieces[slot];
+                    List<List<PieceEvent>> pieceOptions = b.WhatCanICauseWithDoo(thePiece);
+                    BoardLocationList locs = SpotsWhereAddsOccur(b, pieceOptions);
+                    ShowTextBoard(b, thePiece.Location, locs);
+                    ConsoleKeyInfo cki = Console.ReadKey();
+                    switch (cki.KeyChar)
+                    {
+                        case 'q': // left step through my pieces
+                            if (--slot < 0)
+                                slot = myPieces.Count() - 1;
+                            break;
+
+                        case 'w': // right step through my pieces
+                            if (++slot >= myPieces.Count())
+                                slot = 0;
+                            break;
+                            /*
+                        case 'a': // drill into a piece
+                            int changesetslot = 0;
+                            List<PieceEvent> changesetevents = pieceOptions[changesetslot];
+                            List<List<PieceEvent>> shellOfOne = new List<List<PieceEvent>>();
+                            shellOfOne.Add(changesetevents);
+                            BoardLocationList sublocs = SpotsWhereAddsOccur(b, shellOfOne);
+                            break;
+                            */
+                    }
+                    Console.WriteLine();
+                }
+            }
 
 
-
-            ShowBoard(b);
-            FlashSpots(b, ppawn, options);
 
 //            ShowTextBoard(b);
 
